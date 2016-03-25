@@ -9,6 +9,8 @@ import (
 	"unsafe"
 
 	"github.com/dongyiyang/k8sconnection/conntrack/k8sconnector"
+
+	"github.com/golang/glog"
 )
 
 var k8sConnector *k8sconnector.K8sConnector
@@ -93,7 +95,7 @@ func Established() ([]ConnTCP, error) {
 	local := findPodIPs()
 	readMsgs(s, func(c Conn) {
 		if c.MsgType != NfctMsgUpdate {
-			fmt.Printf("msg isn't an update: %d\n", c.MsgType)
+			glog.V(3).Infof("msg isn't an update: %d\n", c.MsgType)
 			return
 		}
 		if c.TCPState != "ESTABLISHED" {
@@ -131,7 +133,7 @@ func Follow() (<-chan Conn, func(), error) {
 			}
 			if c.TCPState == "ESTABLISHED" {
 
-				fmt.Printf("conn is %v \n", c)
+				glog.V(4).Infof("conn is %v \n", c)
 			}
 			res <- c
 		}); err != nil {

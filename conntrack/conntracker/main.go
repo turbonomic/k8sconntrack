@@ -1,9 +1,6 @@
 package main
 
-// Example usage
-
 import (
-	"fmt"
 	"runtime"
 	"time"
 
@@ -35,28 +32,30 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Established on start:\n")
+	glog.V(3).Infof("Established on start:\n")
 	for _, cn := range cs {
-		fmt.Printf(" - %s\n", cn)
+		glog.V(3).Infof(" - %s\n", cn)
 	}
-	fmt.Println("")
 
 	c, err := conntrack.New()
 	if err != nil {
 		panic(err)
 	}
 	for range time.Tick(1 * time.Second) {
-		fmt.Printf("Connections:\n")
-		for _, cn := range c.Connections() {
-			// fmt.Printf(" - %s\n", cn)
-			address := cn.Local
-			connCounterMap = count(connCounterMap, address)
-			svcName, err := k8sconnector.GetServiceNameWithEndpointAddress(address)
-			if err != nil {
-				fmt.Printf(" - %s,\t count: %d,\tError getting svc name\n", cn, connCounterMap[address])
+		connections := c.Connections()
+		if len(connections) > 0 {
+			glog.V(3).Infof("Connections:\n")
+			for _, cn := range connections {
+				// fmt.Printf(" - %s\n", cn)
+				address := cn.Local
+				connCounterMap = count(connCounterMap, address)
+				svcName, err := k8sconnector.GetServiceNameWithEndpointAddress(address)
+				if err != nil {
+					glog.Errorf(" - %s,\t count: %d,\tError getting svc name\n", cn, connCounterMap[address])
+				}
+				glog.V(3).Infof(" - %s,\t count: %d,\t%s\n", cn, connCounterMap[address], svcName)
+				transactionCounter.Count(svcName, address)
 			}
-			fmt.Printf(" - %s,\t count: %d,\t%s\n", cn, connCounterMap[address], svcName)
-			transactionCounter.Count(svcName, address)
 		}
 	}
 }
