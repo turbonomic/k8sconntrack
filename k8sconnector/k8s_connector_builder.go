@@ -21,6 +21,7 @@ func NewK8sConnectorBuilder() *K8sConnectorBuilder {
 	return &K8sConnectorBuilder{}
 }
 
+// Add parameters passed from command line.
 func (s *K8sConnectorBuilder) AddFlags(fs *pflag.FlagSet) *K8sConnectorBuilder {
 	fs.StringVar(&s.NodeAddress, "node-addr", s.NodeAddress, "The address of current node")
 	fs.StringVar(&s.Master, "master", s.Master, "The address of the Kubernetes API server (overrides any value in kubeconfig)")

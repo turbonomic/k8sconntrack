@@ -6,19 +6,7 @@ import (
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/client"
 	"k8s.io/kubernetes/pkg/labels"
-
-	// "github.com/golang/glog"
 )
-
-// Pods Getter is such func that gets all the pods match the provided namespace, labels and fiels.
-type ServiceGetter func(namespace string, selector labels.Selector) ([]*api.Service, error)
-
-type EndpointGetter func(namespace string, selector labels.Selector) ([]*api.Endpoints, error)
-
-type ServiceProbe struct {
-	serviceGetter  ServiceGetter
-	endpointGetter EndpointGetter
-}
 
 type K8sServiceGetter struct {
 	kubeClient *client.Client

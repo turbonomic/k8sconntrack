@@ -12,9 +12,6 @@ import (
 	"github.com/golang/glog"
 )
 
-// Pods Getter is such func that gets all the pods match the provided namespace, labels and fiels.
-type PodsGetter func(namespace string, label labels.Selector, field fields.Selector) ([]*api.Pod, error)
-
 type K8sPodGetter struct {
 	kubeClient *client.Client
 }

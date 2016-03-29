@@ -12,8 +12,6 @@ import (
 	"github.com/golang/glog"
 )
 
-type NodesGetter func(label labels.Selector, field fields.Selector) ([]*api.Node, error)
-
 type K8sNodeGetter struct {
 	kubeClient *client.Client
 }
