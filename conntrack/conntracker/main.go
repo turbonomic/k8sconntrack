@@ -54,7 +54,7 @@ func main() {
 					glog.Errorf(" - %s,\t count: %d,\tError getting svc name\n", cn, connCounterMap[address])
 				}
 				glog.V(3).Infof(" - %s,\t count: %d,\t%s\n", cn, connCounterMap[address], svcName)
-				transactionCounter.Count(svcName, address)
+				transactionCounter.Count(svcName, address+":")
 			}
 		}
 	}

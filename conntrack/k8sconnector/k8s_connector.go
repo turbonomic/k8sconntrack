@@ -77,7 +77,7 @@ func (this *K8sConnector) GetPodsIPsOnNode() ([]string, error) {
 	for _, pod := range pods {
 		if pod.Status.HostIP == this.nodeAddress && pod.Status.PodIP != this.nodeAddress {
 			ips = append(ips, pod.Status.PodIP)
-			glog.V(3).Infof("Get pod %s,\t with IP %s", pod.Namespace+"/"+pod.Name, pod.Status.PodIP)
+			glog.V(4).Infof("Get pod %s,\t with IP %s", pod.Namespace+"/"+pod.Name, pod.Status.PodIP)
 		}
 	}
 	return ips, nil
