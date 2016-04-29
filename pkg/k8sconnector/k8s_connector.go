@@ -2,13 +2,14 @@ package k8sconnector
 
 import (
 	"fmt"
+	"net"
 
 	"k8s.io/kubernetes/pkg/api"
 	client "k8s.io/kubernetes/pkg/client/unversioned"
 	"k8s.io/kubernetes/pkg/fields"
 	"k8s.io/kubernetes/pkg/labels"
 
-	"github.com/dongyiyang/k8sconnection/k8sconnector/getter"
+	"github.com/dongyiyang/k8sconnection/pkg/k8sconnector/getter"
 
 	"github.com/golang/glog"
 )
@@ -20,15 +21,46 @@ var endpointServiceMap map[string]string = make(map[string]string)
 // A K8sConnector is used to connect to the Kubernetes cluster and get info from cluster.
 type K8sConnector struct {
 	kubeClient  *client.Client
-	nodeAddress string
+	nodeAddress map[string]struct{}
 }
 
-func NewK8sConnector(c *client.Client, addr string) *K8sConnector {
+func NewK8sConnector(c *client.Client) (*K8sConnector, error) {
 	glog.V(3).Infof("Building Kubernetes client")
 	initEndpointMap(c)
+	nodeIPs, err := findNodeIPs()
+	if err != nil {
+		return nil, err
+	}
 	return &K8sConnector{
 		kubeClient:  c,
-		nodeAddress: addr,
+		nodeAddress: nodeIPs,
+	}, nil
+}
+
+// Find the all valid IP address of the node.
+func findNodeIPs() (map[string]struct{}, error) {
+	var l = map[string]struct{}{}
+	if localNets, err := net.InterfaceAddrs(); err == nil {
+		// Not all networks are IP networks.
+		for _, localNet := range localNets {
+			if network, ok := localNet.(*net.IPNet); ok {
+				netAddress := network.IP.String()
+				glog.Infof("Find network address %s", netAddress)
+
+				ipAddress := net.ParseIP(netAddress)
+				if ipAddress.To4() == nil {
+					// Only support IPv4 now
+					continue
+				}
+				glog.Infof("Find valid IPv4 address %s", netAddress)
+
+				l[netAddress] = struct{}{}
+			}
+		}
+		return l, nil
+	} else {
+		glog.Errorf("Error is %s", err)
+		return nil, fmt.Errorf("Error finding IP address of current node: %s", err)
 	}
 }
 
@@ -80,12 +112,14 @@ func (this *K8sConnector) GetPodsIPsOnNode() ([]string, error) {
 
 // Here we only want to get the IP of those pods,
 // which are hosted by the current node with its own unique ip.
-func extractValidPodsIPs(pods []*api.Pod, hostAddress string) []string {
+func extractValidPodsIPs(pods []*api.Pod, hostAddresses map[string]struct{}) []string {
 	var ips []string
 	for _, pod := range pods {
-		if pod.Status.HostIP == hostAddress && pod.Status.PodIP != hostAddress {
-			ips = append(ips, pod.Status.PodIP)
-			glog.V(4).Infof("Get pod %s,\t with IP %s", pod.Namespace+"/"+pod.Name, pod.Status.PodIP)
+		if _, exist := hostAddresses[pod.Status.HostIP]; exist {
+			if _, has := hostAddresses[pod.Status.PodIP]; !has {
+				ips = append(ips, pod.Status.PodIP)
+				glog.V(3).Infof("Get pod %s,\t with IP %s", pod.Namespace+"/"+pod.Name, pod.Status.PodIP)
+			}
 		}
 	}
 	return ips

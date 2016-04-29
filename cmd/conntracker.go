@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/dongyiyang/k8sconnection/conntrack"
-	"github.com/dongyiyang/k8sconnection/k8sconnector"
-	"github.com/dongyiyang/k8sconnection/transactioncounter"
+	"github.com/dongyiyang/k8sconnection/pkg/conntrack"
+	"github.com/dongyiyang/k8sconnection/pkg/k8sconnector"
+	"github.com/dongyiyang/k8sconnection/pkg/transactioncounter"
 
 	"github.com/golang/glog"
 )

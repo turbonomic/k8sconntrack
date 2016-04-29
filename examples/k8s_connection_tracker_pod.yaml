@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: k8sconntracker
+  labels:
+    name: k8sconntracker
+spec:
+  hostNetwork: true
+  containers:
+  - name: k8sconntracker
+    image: dongyiyang/k8sconntracker:dev
+    securityContext:
+      privileged: true
+    command:
+      - /bin/conntracker
+    args:
+      - --v=3
+      - --master=http://127.0.0.1:8080
+  restartPolicy: Always

@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/dongyiyang/k8sconnection/k8sconnector"
+	"github.com/dongyiyang/k8sconnection/pkg/k8sconnector"
 
 	"github.com/golang/glog"
 )

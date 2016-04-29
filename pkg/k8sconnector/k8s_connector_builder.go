@@ -11,9 +11,8 @@ import (
 )
 
 type K8sConnectorBuilder struct {
-	NodeAddress string
-	Master      string
-	Kubeconfig  string
+	Master     string
+	Kubeconfig string
 }
 
 func NewK8sConnectorBuilder() *K8sConnectorBuilder {
@@ -22,7 +21,6 @@ func NewK8sConnectorBuilder() *K8sConnectorBuilder {
 
 // Add parameters passed from command line.
 func (s *K8sConnectorBuilder) AddFlags(fs *pflag.FlagSet) *K8sConnectorBuilder {
-	fs.StringVar(&s.NodeAddress, "node-addr", s.NodeAddress, "The address of current node")
 	fs.StringVar(&s.Master, "master", s.Master, "The address of the Kubernetes API server (overrides any value in kubeconfig)")
 	fs.StringVar(&s.Kubeconfig, "kubeconfig", s.Kubeconfig, "Path to kubeconfig file with authorization and master location information.")
 
@@ -30,23 +28,12 @@ func (s *K8sConnectorBuilder) AddFlags(fs *pflag.FlagSet) *K8sConnectorBuilder {
 }
 
 func (s *K8sConnectorBuilder) Build() (*K8sConnector, error) {
-	addr, err := s.getNodeAddress()
-	if err != nil {
-		return nil, err
-	}
 	kubeClient, err := s.createKubeClient()
 	if err != nil {
 		return nil, err
 	}
 
-	return NewK8sConnector(kubeClient, addr), nil
-}
-
-func (s *K8sConnectorBuilder) getNodeAddress() (string, error) {
-	if s.NodeAddress == "" {
-		return "", fmt.Errorf("NodeAddress is not set")
-	}
-	return s.NodeAddress, nil
+	return NewK8sConnector(kubeClient)
 }
 
 // Create Kubernetes API client from

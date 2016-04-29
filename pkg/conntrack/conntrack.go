@@ -2,8 +2,9 @@ package conntrack
 
 import (
 	"fmt"
-	"log"
 	"time"
+
+	"github.com/golang/glog"
 )
 
 // ConnTCP is a connection
@@ -40,7 +41,7 @@ func New() (*ConnTrack, error) {
 			default:
 			}
 			if err != nil {
-				log.Printf("conntrack: %s\n", err)
+				glog.Errorf("conntrack: %s\n", err)
 			}
 			time.Sleep(1 * time.Second)
 		}

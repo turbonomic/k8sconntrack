@@ -22,6 +22,10 @@ func NewK8sNodeGetter(kubeClient *client.Client) *K8sNodeGetter {
 	}
 }
 
+func (this *K8sNodeGetter) GetAllNodes() ([]*api.Node, error) {
+	return this.GetNodes(labels.Everything(), fields.Everything())
+}
+
 // Get all nodes
 func (this *K8sNodeGetter) GetNodes(label labels.Selector, field fields.Selector) ([]*api.Node, error) {
 	listOption := &api.ListOptions{
