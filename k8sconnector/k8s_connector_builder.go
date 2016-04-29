@@ -3,9 +3,8 @@ package k8sconnector
 import (
 	"fmt"
 
-	"k8s.io/kubernetes/pkg/client"
-	"k8s.io/kubernetes/pkg/client/clientcmd"
-	clientcmdapi "k8s.io/kubernetes/pkg/client/clientcmd/api"
+	client "k8s.io/kubernetes/pkg/client/unversioned"
+	"k8s.io/kubernetes/pkg/client/unversioned/clientcmd"
 
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
@@ -58,11 +57,7 @@ func (s *K8sConnectorBuilder) createKubeClient() (*client.Client, error) {
 
 	glog.V(3).Infof("Master is %s", s.Master)
 
-	// This creates a client, first loading any specified kubeconfig
-	// file, and then overriding the Master flag, if non-empty.
-	kubeconfig, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: s.Kubeconfig},
-		&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: s.Master}}).ClientConfig()
+	kubeconfig, err := clientcmd.BuildConfigFromFlags(s.Master, s.Kubeconfig)
 	if err != nil {
 		glog.Errorf("Error getting kubeconfig:  %s", err)
 		return nil, err

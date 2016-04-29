@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/client"
+	client "k8s.io/kubernetes/pkg/client/unversioned"
 	"k8s.io/kubernetes/pkg/fields"
 	"k8s.io/kubernetes/pkg/labels"
 
@@ -24,7 +24,11 @@ func NewK8sPodGetter(kubeClient *client.Client) *K8sPodGetter {
 
 // Get pods match specified namesapce, label and field.
 func (this *K8sPodGetter) GetPods(namespace string, label labels.Selector, field fields.Selector) ([]*api.Pod, error) {
-	podList, err := this.kubeClient.Pods(namespace).List(label, field)
+	listOption := &api.ListOptions{
+		LabelSelector: label,
+		FieldSelector: field,
+	}
+	podList, err := this.kubeClient.Pods(namespace).List(*listOption)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting all the desired pods from Kubernetes cluster: %s", err)
 	}

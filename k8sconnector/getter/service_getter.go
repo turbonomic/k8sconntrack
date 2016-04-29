@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/client"
+	client "k8s.io/kubernetes/pkg/client/unversioned"
 	"k8s.io/kubernetes/pkg/labels"
 )
 
@@ -20,7 +20,10 @@ func NewK8sServiceGetter(kubeClient *client.Client) *K8sServiceGetter {
 
 // Get service match specified namesapce and label.
 func (this *K8sServiceGetter) GetService(namespace string, selector labels.Selector) ([]*api.Service, error) {
-	serviceList, err := this.kubeClient.Services(namespace).List(selector)
+	listOption := &api.ListOptions{
+		LabelSelector: selector,
+	}
+	serviceList, err := this.kubeClient.Services(namespace).List(*listOption)
 	if err != nil {
 		return nil, fmt.Errorf("Error listing services: %s", err)
 	}
@@ -46,7 +49,10 @@ func NewK8sEndpointGetter(kubeClient *client.Client) *K8sEndpointGetter {
 
 // Get endpoints match specified namesapce and label.
 func (this *K8sEndpointGetter) GetEndpoints(namespace string, selector labels.Selector) ([]*api.Endpoints, error) {
-	epList, err := this.kubeClient.Endpoints(namespace).List(selector)
+	listOption := &api.ListOptions{
+		LabelSelector: selector,
+	}
+	epList, err := this.kubeClient.Endpoints(namespace).List(*listOption)
 	if err != nil {
 		return nil, fmt.Errorf("Error listing endpoints: %s", err)
 	}

@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/client"
+	client "k8s.io/kubernetes/pkg/client/unversioned"
 	"k8s.io/kubernetes/pkg/fields"
 	"k8s.io/kubernetes/pkg/labels"
 
@@ -24,7 +24,11 @@ func NewK8sNodeGetter(kubeClient *client.Client) *K8sNodeGetter {
 
 // Get all nodes
 func (this *K8sNodeGetter) GetNodes(label labels.Selector, field fields.Selector) ([]*api.Node, error) {
-	nodeList, err := this.kubeClient.Nodes().List(label, field)
+	listOption := &api.ListOptions{
+		LabelSelector: label,
+		FieldSelector: field,
+	}
+	nodeList, err := this.kubeClient.Nodes().List(*listOption)
 	if err != nil {
 		//TODO error must be handled
 		return nil, fmt.Errorf("Error getting nodes from Kubernetes cluster: %s", err)
