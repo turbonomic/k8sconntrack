@@ -166,6 +166,7 @@ func readMsgs(s int, cb func(Conn)) error {
 				)
 			}
 			conn, err := parsePayload(msg.Data[sizeofGenmsg:])
+			glog.V(4).Infof("Connection payload is %++v", conn)
 			if err != nil {
 				return err
 			}
@@ -237,11 +238,14 @@ func (c Conn) ConnTCP(addressSet map[string]struct{}) []*ConnTCP {
 func parsePayload(b []byte) (*Conn, error) {
 	// Most of this comes from libnetfilter_conntrack/src/conntrack/parse_mnl.c
 	conn := &Conn{}
+	glog.V(4).Infof("Before parse Attrs %++v", b)
 	attrs, err := parseAttrs(b)
 	if err != nil {
 		return conn, err
 	}
 	for _, attr := range attrs {
+		glog.V(4).Infof("Parse each Attrs %++v", attr)
+
 		switch CtattrType(attr.Typ) {
 		case CtaTupleOrig:
 		case CtaTupleReply:
