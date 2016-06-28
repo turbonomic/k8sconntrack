@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"runtime"
 	"time"
 
@@ -9,54 +10,42 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/dongyiyang/k8sconnection/pkg/conntrack"
+	"github.com/dongyiyang/k8sconnection/pkg/flowcollector"
 	"github.com/dongyiyang/k8sconnection/pkg/k8sconnector"
+	"github.com/dongyiyang/k8sconnection/pkg/server"
 	"github.com/dongyiyang/k8sconnection/pkg/transactioncounter"
 
 	"github.com/golang/glog"
 )
 
 func main() {
-	connCounterMap := make(map[string]int64)
-
-	k8sconnector, err := createK8sConnector()
+	k8scon, err := createK8sConnector()
 	if err != nil {
 		glog.Fatalf("Cannot create require connection monitor: %s", err)
 	}
-	conntrack.SetK8sConnector(k8sconnector)
+	conntrack.SetK8sConnector(k8scon)
 
-	transactionCounter := transactioncounter.NewTransactionCounter()
-	go transactioncounter.ListenAndServeProxyServer(transactionCounter)
+	transactionCounter := transactioncounter.NewTransactionCounter(k8scon)
+	flowCollector := flowcollector.NewFlowCollector(k8scon)
 
-	// TODO: do we really need the get it the established when start?
-	cs, err := conntrack.Established()
-	if err != nil {
-		panic(err)
-	}
-	glog.V(3).Infof("Established on start:\n")
-	for _, cn := range cs {
-		glog.V(3).Infof(" - %s\n", cn)
-	}
+	go server.ListenAndServeProxyServer(transactionCounter, flowCollector)
 
 	c, err := conntrack.New()
 	if err != nil {
 		panic(err)
 	}
 	for range time.Tick(1 * time.Second) {
-		connections := c.Connections()
-		if len(connections) > 0 {
-			glog.V(3).Infof("Connections:\n")
-			for _, cn := range connections {
-				// fmt.Printf(" - %s\n", cn)
-				address := cn.Local
-				connCounterMap = count(connCounterMap, address)
-				svcName, err := k8sconnector.GetServiceNameWithEndpointAddress(address)
-				if err != nil {
-					glog.Errorf(" - %s,\t count: %d,\tError getting svc name\n", cn, connCounterMap[address])
-				}
-				glog.V(3).Infof(" - %s,\t count: %d,\t%s\n", cn, connCounterMap[address], svcName)
-				transactionCounter.Count(svcName, address+":")
-			}
-		}
+
+		glog.Infof("~~~~~~~~~~~~~~~~   Transaction Counter	~~~~~~~~~~~~~~~~~~~~")
+		transactionCounter.ProcessConntrackConnections(c)
+
+		fmt.Println()
+		glog.Infof("----------------   Flow Collector	------------------------")
+
+		fmt.Println()
+		fmt.Println()
+
+		flowCollector.TrackFlow()
 	}
 }
 

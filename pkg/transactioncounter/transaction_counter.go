@@ -1,18 +1,24 @@
 package transactioncounter
 
 import (
+	"github.com/dongyiyang/k8sconnection/pkg/conntrack"
+	"github.com/dongyiyang/k8sconnection/pkg/k8sconnector"
+
 	"github.com/golang/glog"
 )
 
 type TransactionCounter struct {
+	connector *k8sconnector.K8sConnector
+
 	// key is service name, value is the transaction related to it.
 	counter map[string]*Transaction
 }
 
-func NewTransactionCounter() *TransactionCounter {
+func NewTransactionCounter(connector *k8sconnector.K8sConnector) *TransactionCounter {
 	counterMap := make(map[string]*Transaction)
 	return &TransactionCounter{
-		counter: counterMap,
+		counter:   counterMap,
+		connector: connector,
 	}
 }
 
@@ -53,4 +59,19 @@ func (tc *TransactionCounter) GetAllTransactions() []*Transaction {
 
 	glog.V(4).Infof("Get All transaction %v", transactions)
 	return transactions
+}
+
+func (tc *TransactionCounter) ProcessConntrackConnections(c *conntrack.ConnTrack) {
+	connections := c.Connections()
+	if len(connections) > 0 {
+		glog.V(3).Infof("Connections:\n")
+		for _, cn := range connections {
+			address := cn.Local
+			svcName, err := tc.connector.GetServiceNameWithEndpointAddress(address)
+			if err != nil {
+				glog.Errorf("\tError getting svc name\n")
+			}
+			tc.Count(svcName, address+":")
+		}
+	}
 }

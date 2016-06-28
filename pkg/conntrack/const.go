@@ -16,13 +16,14 @@ const (
 	NLA_TYPE_MASK       = ^(NLA_F_NESTED | NLA_F_NET_BYTEORDER)
 )
 
-type NfConntrackMsg int
+// Event types.
+type NfConntrackEventType int
 
 const (
-	NfctMsgUnknown NfConntrackMsg = 0
-	NfctMsgNew     NfConntrackMsg = 1 << 0
-	NfctMsgUpdate  NfConntrackMsg = 1 << 1
-	NfctMsgDestroy NfConntrackMsg = 1 << 2
+	NfctMsgUnknown NfConntrackEventType = 0
+	NfctMsgNew     NfConntrackEventType = 1 << 0
+	NfctMsgUpdate  NfConntrackEventType = 1 << 1
+	NfctMsgDestroy NfConntrackEventType = 1 << 2
 )
 
 // taken from libnetfilter_conntrack/src/conntrack/snprintf.c

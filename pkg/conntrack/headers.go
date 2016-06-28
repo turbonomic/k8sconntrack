@@ -90,6 +90,26 @@ const (
 	CtaProtoinfoTcpMax            CtattrProtoinfoTcp = 6
 )
 
+type CtattrCounters int
+
+const (
+	CtaCountersUnspec    CtattrCounters = 0
+	CtaCountersPackets   CtattrCounters = 1
+	CtaCountersBytes     CtattrCounters = 2
+	CtaCounters32Packets CtattrCounters = 3
+	CtaCoutners32Bytes   CtattrCounters = 4
+	CtaCountersMax       CtattrCounters = 5
+)
+
+type CtattrTimestamp int
+
+const (
+	CtaTimestampUnspec CtattrTimestamp = 0
+	CtaTimestampStart  CtattrTimestamp = 1
+	CtaTimestampStop   CtattrTimestamp = 2
+	CtaTimestampMax    CtattrTimestamp = 3
+)
+
 type NfConntrackAttrGrp int
 
 const (

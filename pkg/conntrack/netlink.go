@@ -24,20 +24,6 @@ func nfnlIsError(hdr syscall.NlMsghdr) error {
 		return errors.New("Done!")
 	}
 	return nil
-	/*
-	   // This message is an ACK or a DONE
-	   if (nlh->nlmsg_type == NLMSG_ERROR ||
-	       (nlh->nlmsg_type == NLMSG_DONE &&
-	       nlh->nlmsg_flags & NLM_F_MULTI)) {
-	       if (nlh->nlmsg_len < NLMSG_ALIGN(sizeof(struct nlmsgerr))) {
-	           errno = EBADMSG;
-	           return 1;
-	       }
-	       errno = -(*((int *)NLMSG_DATA(nlh)));
-	       return 1;
-	   }
-	   return 0;
-	*/
 }
 
 // Round the length of a netlink route attribute up to align it

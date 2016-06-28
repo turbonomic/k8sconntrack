@@ -2,14 +2,14 @@ package getter
 
 import (
 	"fmt"
-	"strconv"
+	// "strconv"
 
 	"k8s.io/kubernetes/pkg/api"
 	client "k8s.io/kubernetes/pkg/client/unversioned"
 	"k8s.io/kubernetes/pkg/fields"
 	"k8s.io/kubernetes/pkg/labels"
 
-	"github.com/golang/glog"
+	// "github.com/golang/glog"
 )
 
 type K8sPodGetter struct {
@@ -37,7 +37,7 @@ func (this *K8sPodGetter) GetPods(namespace string, label labels.Selector, field
 		p := pod
 		podItems = append(podItems, &p)
 	}
-	glog.V(3).Infof("Discovering Pods, now the cluster has " + strconv.Itoa(len(podItems)) + " pods")
+	// glog.V(3).Infof("Discovering Pods, now the cluster has " + strconv.Itoa(len(podItems)) + " pods")
 
 	return podItems, nil
 }

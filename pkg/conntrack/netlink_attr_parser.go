@@ -5,6 +5,8 @@ package conntrack
 import (
 	"encoding/binary"
 	"errors"
+
+	// "github.com/golang/glog"
 )
 
 const attrHdrLength = 4
@@ -41,5 +43,6 @@ func parseAttr(b []byte) (Attr, []byte) {
 		IsNested:       typ&NLA_F_NESTED > 0,
 		IsNetByteorder: typ&NLA_F_NET_BYTEORDER > 0,
 	}
+	// glog.V(4).Infof("Attr is %++v", attr)
 	return attr, b[rtaAlignOf(attrHdrLength+int(l)):]
 }

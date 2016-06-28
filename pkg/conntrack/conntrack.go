@@ -19,8 +19,7 @@ func (c ConnTCP) String() string {
 	return fmt.Sprintf("%s:%s->%s:%s", c.Local, c.LocalPort, c.Remote, c.RemotePort)
 }
 
-// ConnTrack monitors the connections. It is build with Established() and
-// Follow().
+// ConnTrack monitors the connections.
 type ConnTrack struct {
 	connReq chan chan []ConnTCP
 	quit    chan struct{}
@@ -73,18 +72,34 @@ func (c *ConnTrack) track() error {
 		return err
 	}
 
-	established := map[ConnTCP]struct{}{}
-	cs, err := Established()
+	establishedConns, err := ListConnections(func(c ConntrackInfo) bool {
+		// Here we only care about updated info
+		if c.MsgType != NfctMsgUpdate {
+			glog.V(4).Infof("Message isn't an update: %d\n", c.MsgType)
+			return false
+		}
+		// As for updated info, we only care about ESTABLISHED for now.
+		if c.TCPState != "ESTABLISHED" {
+			glog.V(4).Infof("State isn't in ESTABLISHED: %s\n", c.TCPState)
+			return false
+		}
+		if c.TCPState == "ESTABLISHED" {
+			glog.V(4).Infof("EEEEEEEE  conn is %v \n", c)
+		}
+		return true
+	})
 	if err != nil {
 		return err
 	}
-	for _, c := range cs {
+
+	established := map[ConnTCP]struct{}{}
+	for _, c := range establishedConns {
 		established[c] = struct{}{}
 	}
 	// we keep track of deleted so we can report them
 	deleted := map[ConnTCP]struct{}{}
 
-	local := findPodIPs()
+	podIPs := FindPodIPs()
 	updateLocalIPs := time.Tick(time.Minute)
 
 	for {
@@ -95,7 +110,7 @@ func (c *ConnTrack) track() error {
 			return nil
 
 		case <-updateLocalIPs:
-			local = findPodIPs()
+			podIPs = FindPodIPs()
 
 		case e, ok := <-events:
 			if !ok {
@@ -107,25 +122,31 @@ func (c *ConnTrack) track() error {
 				// not interested
 
 			case e.TCPState == "ESTABLISHED":
-				conns := e.ConnTCP(local)
+				conns := e.BuildTCPConn(podIPs)
 				for _, cn := range conns {
 					if cn == nil {
 						// log.Printf("not a local connection: %+v\n", e)
 						continue
 					}
 					established[*cn] = struct{}{}
+					glog.V(4).Infof("Established Connection payload is %++v", cn)
 				}
 
 			case e.MsgType == NfctMsgDestroy, e.TCPState == "TIME_WAIT", e.TCPState == "CLOSE":
-				conns := e.ConnTCP(local)
+				// !!! Since in Follow(), it only sends back conneciton with ESTABLISHED state,
+				// So this part of code would never be hit under current logic.
+				conns := e.BuildTCPConn(podIPs)
 				for _, cn := range conns {
 					if cn == nil {
-						// log.Printf("not a local connection: %+v\n", e)
+						// Not a connection to pod on current node.
 						continue
 					}
 					if _, ok := established[*cn]; !ok {
+						glog.V(4).Infof("Connection does not exist in ESTABLISHED %++v", cn)
 						continue
 					}
+					glog.V(4).Infof("Connection payload is %++v", cn)
+					// delete the connection from established connection set
 					delete(established, *cn)
 					deleted[*cn] = struct{}{}
 				}
@@ -136,9 +157,9 @@ func (c *ConnTrack) track() error {
 			for c := range established {
 				cs = append(cs, c)
 			}
-			// for c := range deleted {
-			// 	cs = append(cs, c)
-			// }
+			for c := range deleted {
+				cs = append(cs, c)
+			}
 			r <- cs
 			established = map[ConnTCP]struct{}{}
 
