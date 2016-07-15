@@ -12,6 +12,12 @@ import (
 	// "github.com/golang/glog"
 )
 
+type PodList struct {
+	Items []*api.Pod
+}
+
+func (this *PodList) IsEntityList() {}
+
 type K8sPodGetter struct {
 	kubeClient *client.Client
 }
@@ -24,6 +30,15 @@ func NewK8sPodGetter(kubeClient *client.Client) *K8sPodGetter {
 
 // Get pods match specified namesapce, label and field.
 func (this *K8sPodGetter) GetPods(namespace string, label labels.Selector, field fields.Selector) ([]*api.Pod, error) {
+	podList, err := this.getPods(namespace, label, field)
+	if err != nil {
+		return nil, err
+	}
+	return podList.Items, nil
+}
+
+// Get pods based on namespace, label and field. Store the result in PodList.
+func (this *K8sPodGetter) getPods(namespace string, label labels.Selector, field fields.Selector) (*PodList, error) {
 	listOption := &api.ListOptions{
 		LabelSelector: label,
 		FieldSelector: field,
@@ -39,5 +54,16 @@ func (this *K8sPodGetter) GetPods(namespace string, label labels.Selector, field
 	}
 	// glog.V(3).Infof("Discovering Pods, now the cluster has " + strconv.Itoa(len(podItems)) + " pods")
 
-	return podItems, nil
+	return &PodList{
+		Items: podItems}, nil
+}
+
+// Implement EntityGetter Interface.
+func (this *K8sPodGetter) GetAllEntities() (EntityList, error) {
+	return this.getPods(api.NamespaceAll, labels.Everything(), fields.Everything())
+}
+
+// Register current node getter to K8sEntityGetter.
+func (this *K8sPodGetter) register(k8sEntityGetter *K8sEntityGetter) {
+	k8sEntityGetter.RegisterEntityGetter(EntityType_Pod, this)
 }

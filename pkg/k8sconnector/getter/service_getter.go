@@ -36,32 +36,3 @@ func (this *K8sServiceGetter) GetService(namespace string, selector labels.Selec
 
 	return serviceItems, nil
 }
-
-type K8sEndpointGetter struct {
-	kubeClient *client.Client
-}
-
-func NewK8sEndpointGetter(kubeClient *client.Client) *K8sEndpointGetter {
-	return &K8sEndpointGetter{
-		kubeClient: kubeClient,
-	}
-}
-
-// Get endpoints match specified namesapce and label.
-func (this *K8sEndpointGetter) GetEndpoints(namespace string, selector labels.Selector) ([]*api.Endpoints, error) {
-	listOption := &api.ListOptions{
-		LabelSelector: selector,
-	}
-	epList, err := this.kubeClient.Endpoints(namespace).List(*listOption)
-	if err != nil {
-		return nil, fmt.Errorf("Error listing endpoints: %s", err)
-	}
-
-	var epItems []*api.Endpoints
-	for _, endpoint := range epList.Items {
-		ep := endpoint
-		epItems = append(epItems, &ep)
-	}
-
-	return epItems, nil
-}

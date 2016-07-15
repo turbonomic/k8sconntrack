@@ -5,35 +5,41 @@ import (
 )
 
 // Endpoint keeps track of current ip of Pods running in cluster.
-type PodIPStore struct {
-	lock sync.RWMutex
-	// Key is PodIP
+type K8sInfoStore struct {
+	lock  sync.RWMutex
 	items map[string]interface{}
 }
 
-func NewPodIPStore() *PodIPStore {
+func NewK8sInfoStore() *K8sInfoStore {
 
-	podIPStore := &PodIPStore{
+	k8sInfoStore := &K8sInfoStore{
 		items: make(map[string]interface{}),
 	}
-	return podIPStore
+	return k8sInfoStore
 }
 
-func (this *PodIPStore) Add(ip string) {
+func (this *K8sInfoStore) Add(key string, val interface{}) {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 
-	this.items[ip] = struct{}{}
+	this.items[key] = val
 }
 
-func (this *PodIPStore) GetPodIPSets() map[string]interface{} {
+func (this *K8sInfoStore) Get(key string) interface{} {
+	this.lock.RLock()
+	defer this.lock.RUnlock()
+
+	return this.items[key]
+}
+
+func (this *K8sInfoStore) GetAll() map[string]interface{} {
 	this.lock.RLock()
 	defer this.lock.RUnlock()
 
 	return this.items
 }
 
-func (this *PodIPStore) DeleteAll() {
+func (this *K8sInfoStore) DeleteAll() {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 

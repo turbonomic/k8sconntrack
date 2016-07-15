@@ -2,13 +2,11 @@ package k8sconnector
 
 import (
 	"fmt"
-	"net"
+	"reflect"
 	"time"
 
 	"k8s.io/kubernetes/pkg/api"
 	client "k8s.io/kubernetes/pkg/client/unversioned"
-	"k8s.io/kubernetes/pkg/fields"
-	"k8s.io/kubernetes/pkg/labels"
 
 	"github.com/dongyiyang/k8sconnection/pkg/k8sconnector/getter"
 	"github.com/dongyiyang/k8sconnection/pkg/k8sconnector/storage"
@@ -22,24 +20,43 @@ var endpointServiceMap map[string]string = make(map[string]string)
 
 // A K8sConnector is used to connect to the Kubernetes cluster and get info from cluster.
 type K8sConnector struct {
-	kubeClient  *client.Client
 	nodeAddress map[string]struct{}
 
-	podIPStore *storage.PodIPStore
+	podIPStore *storage.K8sInfoStore
+
+	// K8sEntityGetter is used to get all Kubernetes entities from Kuberentes cluster.
+	k8sEntityGetter *getter.K8sEntityGetter
 }
 
 func NewK8sConnector(c *client.Client) (*K8sConnector, error) {
-	glog.V(3).Infof("Building Kubernetes client")
-	initEndpointMap(c)
-	nodeIPs, err := findNodeIPs()
+	glog.V(3).Infof("Building Kubernetes connector")
+
+	k8sEntityGetter := getter.NewK8sEntityGetter()
+
+	// Create NodeGetter
+	nodeGetter := getter.NewK8sNodeGetter(c)
+	k8sEntityGetter.RegisterEntityGetter(getter.EntityType_Node, nodeGetter)
+	// Create PodGetter and register to k8sEntityGetter
+	podGetter := getter.NewK8sPodGetter(c)
+	k8sEntityGetter.RegisterEntityGetter(getter.EntityType_Pod, podGetter)
+
+	// Create EndpointGetter and register to k8sEntityGetter
+	endpointGetter := getter.NewK8sEndpointGetter(c)
+	k8sEntityGetter.RegisterEntityGetter(getter.EntityType_Endpoint, endpointGetter)
+
+	nodeIPs, err := findIPsOfCurrentNode()
 	if err != nil {
 		return nil, err
 	}
+
 	connector := &K8sConnector{
-		kubeClient:  c,
 		nodeAddress: nodeIPs,
-		podIPStore:  storage.NewPodIPStore(),
+		podIPStore:  storage.NewK8sInfoStore(),
+
+		k8sEntityGetter: k8sEntityGetter,
 	}
+
+	connector.initEndpointMap()
 
 	go connector.syncK8s()
 
@@ -47,7 +64,7 @@ func NewK8sConnector(c *client.Client) (*K8sConnector, error) {
 }
 
 // Sync Kubernetes and update info periodically.
-// So that we don't have to make API calls to Kubernetes API server every time
+// So that we don't have to make API calls to Kubernetes api-server every time
 // for some operations, such as getting pods IPs.
 func (this *K8sConnector) syncK8s() {
 	// TODO: use time.sleep for now...
@@ -55,49 +72,23 @@ func (this *K8sConnector) syncK8s() {
 		// sync pod ip
 		podIPs, err := this.retreivePodsIPsOnNode()
 		if err != nil {
-			glog.Fatalf("Error getting pod ips from Kubernets cluster: %s.\n Exit...", err)
+			glog.Fatalf("Error getting pod IPs from Kubernetes cluster: %s.\n Exit...", err)
 		}
 		this.podIPStore.DeleteAll()
 		for _, podIP := range podIPs {
-			this.podIPStore.Add(podIP)
+			this.podIPStore.Add(podIP, struct{}{})
 		}
 
+		// Synchronize every 10 seconds
 		time.Sleep(time.Second * 10)
-	}
-}
-
-// Find the all valid IP address of the node.
-func findNodeIPs() (map[string]struct{}, error) {
-	var l = map[string]struct{}{}
-	if localNets, err := net.InterfaceAddrs(); err == nil {
-		// Not all networks are IP networks.
-		for _, localNet := range localNets {
-			if network, ok := localNet.(*net.IPNet); ok {
-				netAddress := network.IP.String()
-				glog.Infof("Find network address %s", netAddress)
-
-				ipAddress := net.ParseIP(netAddress)
-				if ipAddress.To4() == nil {
-					// Only support IPv4 now
-					continue
-				}
-				glog.Infof("Find valid IPv4 address %s", netAddress)
-
-				l[netAddress] = struct{}{}
-			}
-		}
-		return l, nil
-	} else {
-		glog.Errorf("Error is %s", err)
-		return nil, fmt.Errorf("Error finding IP address of current node: %s", err)
 	}
 }
 
 // Initialize the endpoint to service map.
 // First get all the endpoint from Kubernetes cluster; Then create map.
-func initEndpointMap(c *client.Client) error {
+func (this *K8sConnector) initEndpointMap() error {
 	glog.V(3).Infof("Initialize endpoint map.")
-	endpoints, err := GetAllEpsInK8s(c)
+	endpoints, err := this.GetAllEpsInK8s()
 	if err != nil {
 		return err
 	}
@@ -126,27 +117,32 @@ func initEpSvcMap(epSvcMap map[string]string, endpoints []*api.Endpoints) {
 // Get the ip of pods those are running on the current node.
 func (this *K8sConnector) GetPodsIPsOnNode() ([]string, error) {
 
-	return this.retreivePodsIPsOnNode()
+	ipSet := this.FindPodsIP()
+	var ipList []string
+	for ip, _ := range ipSet {
+		ipList = append(ipList, ip)
+	}
+	return ipList, nil
 }
 
 // Get the ip of pods those are running on the current node.
 func (this *K8sConnector) FindPodsIP() map[string]interface{} {
-	return this.podIPStore.GetPodIPSets()
+	return this.podIPStore.GetAll()
 }
 
 // Get the ip of pods those are running on the current node.
 func (this *K8sConnector) retreivePodsIPsOnNode() ([]string, error) {
 	// glog.V(3).Infof("Now get pod running on current node.")
-
-	podGetter := getter.NewK8sPodGetter(this.kubeClient)
-	namespace := api.NamespaceAll
-	label := labels.Everything()
-	field := fields.Everything()
-	pods, err := podGetter.GetPods(namespace, label, field)
+	entityList, err := this.k8sEntityGetter.GetAllEntitiesOfType(getter.EntityType_Pod)
 	if err != nil {
 		return nil, err
 	}
-	ips := extractValidPodsIPs(pods, this.nodeAddress)
+	podList, ok := entityList.(*getter.PodList)
+	if !ok {
+		glog.Errorf("Type of entityList is %v, but got %v", reflect.TypeOf(entityList), reflect.TypeOf(podList))
+		return nil, fmt.Errorf("Casting Error.")
+	}
+	ips := extractValidPodsIPs(podList.Items, this.nodeAddress)
 	return ips, nil
 }
 
@@ -159,7 +155,7 @@ func extractValidPodsIPs(pods []*api.Pod, hostAddresses map[string]struct{}) []s
 			if _, has := hostAddresses[pod.Status.PodIP]; !has {
 				ips = append(ips, pod.Status.PodIP)
 				// glog.V(3).Infof("Get pod %s,\t with IP %s", pod.Namespace+"/"+pod.Name, pod.Status.PodIP)
-				podIPMap[pod.Status.PodIP] = pod.Name
+				podIP2NameMap[pod.Status.PodIP] = pod.Name
 			}
 		}
 	}
@@ -167,6 +163,8 @@ func extractValidPodsIPs(pods []*api.Pod, hostAddresses map[string]struct{}) []s
 }
 
 // Retrieve service name based on endpoint address.
+// First try to find the service name from the endpoint2service map. If not found,
+// trigger an update for all the entries in the map.
 func (this *K8sConnector) GetServiceNameWithEndpointAddress(address string) (string, error) {
 	serviceName, exist := endpointServiceMap[address]
 	// A better solution is to start a watcher for the endpoint changes.
@@ -182,15 +180,21 @@ func (this *K8sConnector) GetServiceNameWithEndpointAddress(address string) (str
 }
 
 // Create Kuberntes endpoint getter and retrieve all the endpoints.
-func GetAllEpsInK8s(c *client.Client) ([]*api.Endpoints, error) {
-	epGetter := getter.NewK8sEndpointGetter(c)
-	namespace := api.NamespaceAll
-	label := labels.Everything()
-	return epGetter.GetEndpoints(namespace, label)
+func (this *K8sConnector) GetAllEpsInK8s() ([]*api.Endpoints, error) {
+	entityList, err := this.k8sEntityGetter.GetAllEntitiesOfType(getter.EntityType_Endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot get all endpoints from Kubernetes cluster.")
+	}
+	endpointList, ok := entityList.(*getter.EndpointList)
+	if !ok {
+		return nil, fmt.Errorf("Casting Error.")
+	}
+	return endpointList.Items, nil
 }
 
+// Find the name of the endpoint according to its address and retrieve its corresponding service, then update endpoint-service map.
 func (this *K8sConnector) updateEndpointMap(epAddress string) (string, error) {
-	endpoints, err := GetAllEpsInK8s(this.kubeClient)
+	endpoints, err := this.GetAllEpsInK8s()
 	if err != nil {
 		return "", fmt.Errorf("Cannot update %s: %s", epAddress, err)
 	}
@@ -218,8 +222,8 @@ func updateEpSvcMap(epSvcMap map[string]string, epAddress string, endpoints []*a
 	return "", fmt.Errorf("Endpoint with IP address %s is not found.", epAddress)
 }
 
-var podIPMap map[string]string = make(map[string]string)
+var podIP2NameMap map[string]string = make(map[string]string)
 
 func GetPodNameFromPodIP(PodIP string) string {
-	return podIPMap[PodIP]
+	return podIP2NameMap[PodIP]
 }
