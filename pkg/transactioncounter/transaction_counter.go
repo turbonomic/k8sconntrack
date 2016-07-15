@@ -22,6 +22,7 @@ func NewTransactionCounter(connector *k8sconnector.K8sConnector) *TransactionCou
 	}
 }
 
+// Clear the transaction counter map.
 func (tc *TransactionCounter) Reset() {
 	glog.V(3).Infof("Inside reset transaction counter")
 	counterMap := make(map[string]*Transaction)
@@ -29,6 +30,9 @@ func (tc *TransactionCounter) Reset() {
 	tc.counter = counterMap
 }
 
+// Increment the transaction count for a single endpoint.
+// Transaction counter map uses serviceName as key and endpoint map as value.
+// In endpoint map, key is endpoint IP address, value is the number of transaction happened on the endpoint.
 func (tc *TransactionCounter) Count(serviceName, endpointAddress string) {
 	trans, ok := tc.counter[serviceName]
 	if !ok {
@@ -55,14 +59,13 @@ func (tc *TransactionCounter) GetAllTransactions() []*Transaction {
 	for _, value := range tc.counter {
 		transactions = append(transactions, value)
 	}
-	glog.V(5).Infof("Get All transaction from tc %v", tc.counter)
 
 	glog.V(4).Infof("Get All transaction %v", transactions)
 	return transactions
 }
 
-func (tc *TransactionCounter) ProcessConntrackConnections(c *conntrack.ConnTrack) {
-	connections := c.Connections()
+// Get all the current Established TCP connections from conntrack and add count to transaction counter.
+func (tc *TransactionCounter) ProcessConntrackConnections(connections []conntrack.ConnTCP) {
 	if len(connections) > 0 {
 		glog.V(3).Infof("Connections:\n")
 		for _, cn := range connections {

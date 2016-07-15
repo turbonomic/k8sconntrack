@@ -37,7 +37,7 @@ func main() {
 	for range time.Tick(1 * time.Second) {
 
 		glog.Infof("~~~~~~~~~~~~~~~~   Transaction Counter	~~~~~~~~~~~~~~~~~~~~")
-		transactionCounter.ProcessConntrackConnections(c)
+		transactionCounter.ProcessConntrackConnections(c.Connections())
 
 		fmt.Println()
 		glog.Infof("----------------   Flow Collector	------------------------")
@@ -49,6 +49,7 @@ func main() {
 	}
 }
 
+// Get variables and creates Kubernetes connector.
 func createK8sConnector() (*k8sconnector.K8sConnector, error) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
@@ -58,20 +59,10 @@ func createK8sConnector() (*k8sconnector.K8sConnector, error) {
 	util.InitLogs()
 	defer util.FlushLogs()
 
-	// monitor, err := s.Build(pflag.CommandLine.Args())
 	monitor, err := s.Build()
 	if err != nil {
 		return nil, err
 	}
 
 	return monitor, nil
-}
-
-func count(connCounterMap map[string]int64, src string) map[string]int64 {
-	count, exist := connCounterMap[src]
-	if !exist {
-		count = 0
-	}
-	connCounterMap[src] = count + 1
-	return connCounterMap
 }

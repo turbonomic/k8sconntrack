@@ -6,6 +6,7 @@ import (
 	"strconv"
 )
 
+// Struct for storing retreived conntrack information. The fields are chosen according the output of nf_conntrack.
 type ConntrackInfo struct {
 	MsgType        NfConntrackEventType
 	Proto          int
