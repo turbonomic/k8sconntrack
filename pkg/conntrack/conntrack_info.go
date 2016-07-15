@@ -26,9 +26,9 @@ func (c ConntrackInfo) String() string {
 		c.Src, c.SrcPort, c.Dst, c.DstPort, c.Packets, c.Bytes, c.StartTimestamp, c.DeltaTime)
 }
 
-// ConnTCP decides which way this connection is going and makes a ConnTCP.
-func (c ConntrackInfo) BuildTCPConn(addressSet map[string]struct{}) []*ConnTCP {
-	var res []*ConnTCP
+// TCPConnection decides which way this connection is going and makes a TCPConnection.
+func (c ConntrackInfo) BuildTCPConn(addressSet map[string]struct{}) []*TCPConnection {
+	var res []*TCPConnection
 	// conntrack gives us all connections, even things passing through. But here we only
 	// care connection those are sourced from or destinated to address defined in addressSet
 	src := c.Src.String()
@@ -36,7 +36,7 @@ func (c ConntrackInfo) BuildTCPConn(addressSet map[string]struct{}) []*ConnTCP {
 	_, srcLocal := addressSet[src]
 	_, dstLocal := addressSet[dst]
 	if srcLocal {
-		srcConn := &ConnTCP{
+		srcConn := &TCPConnection{
 			Local:      src,
 			LocalPort:  strconv.Itoa(int(c.SrcPort)),
 			Remote:     dst,
@@ -45,7 +45,7 @@ func (c ConntrackInfo) BuildTCPConn(addressSet map[string]struct{}) []*ConnTCP {
 		res = append(res, srcConn)
 	}
 	if dstLocal {
-		dstConn := &ConnTCP{
+		dstConn := &TCPConnection{
 			Local:      dst,
 			LocalPort:  strconv.Itoa(int(c.DstPort)),
 			Remote:     src,

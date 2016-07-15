@@ -38,7 +38,7 @@ func (c *ConntrackListReq) toWireFormat() []byte {
 type FilterFunc func(c ConntrackInfo) bool
 
 // lists all established TCP connections.
-func ListConnections(filter FilterFunc) ([]ConnTCP, error) {
+func ListConnections(filter FilterFunc) ([]TCPConnection, error) {
 	s, lsa, err := connectNetfilter(0)
 	if err != nil {
 		return nil, fmt.Errorf("Error listing connections: %s", err)
@@ -65,7 +65,7 @@ func ListConnections(filter FilterFunc) ([]ConnTCP, error) {
 		return nil, err
 	}
 
-	var conns []ConnTCP
+	var conns []TCPConnection
 	local := FindPodIPs()
 
 	readMessagesFromNetfilter(s, func(c ConntrackInfo) {

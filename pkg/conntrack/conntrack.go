@@ -7,28 +7,28 @@ import (
 	"github.com/golang/glog"
 )
 
-// ConnTCP is a connection
-type ConnTCP struct {
+// TCPConnection is a connection
+type TCPConnection struct {
 	Local      string // net.IP
 	LocalPort  string // int
 	Remote     string // net.IP
 	RemotePort string // int
 }
 
-func (c ConnTCP) String() string {
+func (c TCPConnection) String() string {
 	return fmt.Sprintf("%s:%s->%s:%s", c.Local, c.LocalPort, c.Remote, c.RemotePort)
 }
 
 // ConnTrack monitors the connections.
 type ConnTrack struct {
-	connReq chan chan []ConnTCP
+	connReq chan chan []TCPConnection
 	quit    chan struct{}
 }
 
 // New returns a ConnTrack.
 func New() (*ConnTrack, error) {
 	c := ConnTrack{
-		connReq: make(chan chan []ConnTCP),
+		connReq: make(chan chan []TCPConnection),
 		quit:    make(chan struct{}),
 	}
 	go func() {
@@ -56,8 +56,8 @@ func (c ConnTrack) Close() {
 
 // Connections returns the list of all connections seen since last time you
 // called it.
-func (c *ConnTrack) Connections() []ConnTCP {
-	r := make(chan []ConnTCP)
+func (c *ConnTrack) Connections() []TCPConnection {
+	r := make(chan []TCPConnection)
 	c.connReq <- r
 	return <-r
 }
@@ -92,12 +92,12 @@ func (c *ConnTrack) track() error {
 		return err
 	}
 
-	established := map[ConnTCP]struct{}{}
+	established := map[TCPConnection]struct{}{}
 	for _, c := range establishedConns {
 		established[c] = struct{}{}
 	}
 	// we keep track of deleted so we can report them
-	deleted := map[ConnTCP]struct{}{}
+	deleted := map[TCPConnection]struct{}{}
 
 	podIPs := FindPodIPs()
 	updateLocalIPs := time.Tick(time.Minute)
@@ -153,7 +153,7 @@ func (c *ConnTrack) track() error {
 			}
 
 		case r := <-c.connReq:
-			cs := make([]ConnTCP, 0, len(established)) //+len(deleted))
+			cs := make([]TCPConnection, 0, len(established)) //+len(deleted))
 			for c := range established {
 				cs = append(cs, c)
 			}
@@ -161,9 +161,9 @@ func (c *ConnTrack) track() error {
 				cs = append(cs, c)
 			}
 			r <- cs
-			established = map[ConnTCP]struct{}{}
+			established = map[TCPConnection]struct{}{}
 
-			deleted = map[ConnTCP]struct{}{}
+			deleted = map[TCPConnection]struct{}{}
 
 		}
 	}

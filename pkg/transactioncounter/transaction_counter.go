@@ -65,7 +65,7 @@ func (tc *TransactionCounter) GetAllTransactions() []*Transaction {
 }
 
 // Get all the current Established TCP connections from conntrack and add count to transaction counter.
-func (tc *TransactionCounter) ProcessConntrackConnections(connections []conntrack.ConnTCP) {
+func (tc *TransactionCounter) ProcessConntrackConnections(connections []conntrack.TCPConnection) {
 	if len(connections) > 0 {
 		glog.V(3).Infof("Connections:\n")
 		for _, cn := range connections {
