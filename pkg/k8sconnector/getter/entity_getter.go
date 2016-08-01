@@ -17,6 +17,7 @@ type EntityList interface {
 	IsEntityList()
 }
 type EntityGetter interface {
+	GetType() EntityType
 	GetAllEntities() (EntityList, error)
 }
 
@@ -30,8 +31,8 @@ func NewK8sEntityGetter() *K8sEntityGetter {
 	}
 }
 
-func (this *K8sEntityGetter) RegisterEntityGetter(getterType EntityType, eGetter EntityGetter) {
-	this.getters[getterType] = eGetter
+func (this *K8sEntityGetter) RegisterEntityGetter(eGetter EntityGetter) {
+	this.getters[eGetter.GetType()] = eGetter
 }
 
 // Get all entities of provided type.

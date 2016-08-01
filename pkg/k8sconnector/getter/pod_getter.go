@@ -2,14 +2,11 @@ package getter
 
 import (
 	"fmt"
-	// "strconv"
 
 	"k8s.io/kubernetes/pkg/api"
 	client "k8s.io/kubernetes/pkg/client/unversioned"
 	"k8s.io/kubernetes/pkg/fields"
 	"k8s.io/kubernetes/pkg/labels"
-
-	// "github.com/golang/glog"
 )
 
 type PodList struct {
@@ -19,6 +16,7 @@ type PodList struct {
 func (this *PodList) IsEntityList() {}
 
 type K8sPodGetter struct {
+	getterType EntityType
 	kubeClient *client.Client
 }
 
@@ -26,6 +24,10 @@ func NewK8sPodGetter(kubeClient *client.Client) *K8sPodGetter {
 	return &K8sPodGetter{
 		kubeClient: kubeClient,
 	}
+}
+
+func (this *K8sPodGetter) GetType() EntityType {
+	return this.getterType
 }
 
 // Get pods match specified namesapce, label and field.
@@ -65,5 +67,5 @@ func (this *K8sPodGetter) GetAllEntities() (EntityList, error) {
 
 // Register current node getter to K8sEntityGetter.
 func (this *K8sPodGetter) register(k8sEntityGetter *K8sEntityGetter) {
-	k8sEntityGetter.RegisterEntityGetter(EntityType_Pod, this)
+	k8sEntityGetter.RegisterEntityGetter(this)
 }

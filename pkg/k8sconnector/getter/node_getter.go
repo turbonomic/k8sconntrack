@@ -19,21 +19,23 @@ type NodeList struct {
 func (this *NodeList) IsEntityList() {}
 
 type K8sNodeGetter struct {
+	getterType      EntityType
 	kubeClient      *client.Client
 	k8sEntityGetter *K8sEntityGetter
 }
 
 func NewK8sNodeGetter(kubeClient *client.Client) *K8sNodeGetter {
 	return &K8sNodeGetter{
+		getterType: EntityType_Node,
 		kubeClient: kubeClient,
 	}
 }
 
-func (this *K8sNodeGetter) GetAllNodes() ([]*api.Node, error) {
-	return this.GetNodes(labels.Everything(), fields.Everything())
+func (this *K8sNodeGetter) GetType() EntityType {
+	return this.getterType
 }
 
-// Get all nodes
+// Get nodes based on label and field.
 func (this *K8sNodeGetter) GetNodes(label labels.Selector, field fields.Selector) ([]*api.Node, error) {
 	nodeList, err := this.getNodes(label, field)
 	if err != nil {
@@ -69,5 +71,5 @@ func (this *K8sNodeGetter) GetAllEntities() (EntityList, error) {
 
 // Register current node getter to K8sEntityGetter.
 func (this *K8sNodeGetter) register() {
-	this.k8sEntityGetter.RegisterEntityGetter(EntityType_Node, this)
+	this.k8sEntityGetter.RegisterEntityGetter(this)
 }

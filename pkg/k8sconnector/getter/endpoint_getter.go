@@ -15,13 +15,19 @@ type EndpointList struct {
 func (this *EndpointList) IsEntityList() {}
 
 type K8sEndpointGetter struct {
+	getterType EntityType
 	kubeClient *client.Client
 }
 
 func NewK8sEndpointGetter(kubeClient *client.Client) *K8sEndpointGetter {
 	return &K8sEndpointGetter{
+		getterType: EntityType_Endpoint,
 		kubeClient: kubeClient,
 	}
+}
+
+func (this *K8sEndpointGetter) GetType() EntityType {
+	return this.getterType
 }
 
 // Get endpoints match specified namesapce and label.
@@ -60,5 +66,5 @@ func (this *K8sEndpointGetter) GetAllEntities() (EntityList, error) {
 
 // Register current node getter to K8sEntityGetter.
 func (this *K8sEndpointGetter) register(k8sEntityGetter *K8sEntityGetter) {
-	k8sEntityGetter.RegisterEntityGetter(EntityType_Endpoint, this)
+	k8sEntityGetter.RegisterEntityGetter(this)
 }

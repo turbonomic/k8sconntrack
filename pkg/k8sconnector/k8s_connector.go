@@ -35,14 +35,15 @@ func NewK8sConnector(c *client.Client) (*K8sConnector, error) {
 
 	// Create NodeGetter
 	nodeGetter := getter.NewK8sNodeGetter(c)
-	k8sEntityGetter.RegisterEntityGetter(getter.EntityType_Node, nodeGetter)
+	k8sEntityGetter.RegisterEntityGetter(nodeGetter)
+
 	// Create PodGetter and register to k8sEntityGetter
 	podGetter := getter.NewK8sPodGetter(c)
-	k8sEntityGetter.RegisterEntityGetter(getter.EntityType_Pod, podGetter)
+	k8sEntityGetter.RegisterEntityGetter(podGetter)
 
 	// Create EndpointGetter and register to k8sEntityGetter
 	endpointGetter := getter.NewK8sEndpointGetter(c)
-	k8sEntityGetter.RegisterEntityGetter(getter.EntityType_Endpoint, endpointGetter)
+	k8sEntityGetter.RegisterEntityGetter(endpointGetter)
 
 	nodeIPs, err := findIPsOfCurrentNode()
 	if err != nil {
