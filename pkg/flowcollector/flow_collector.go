@@ -43,6 +43,7 @@ func (this *FlowCollector) TrackFlow() {
 		panic(err)
 	}
 	if len(infos) < 1 {
+		glog.Infof("No Data")
 		return
 	}
 

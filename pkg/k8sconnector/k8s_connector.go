@@ -64,7 +64,7 @@ func NewK8sConnector(c *client.Client) (*K8sConnector, error) {
 	return connector, nil
 }
 
-// Sync Kubernetes and update info periodically.
+// Sync Kubernetes and update info periodically (10 seconds).
 // So that we don't have to make API calls to Kubernetes api-server every time
 // for some operations, such as getting pods IPs.
 func (this *K8sConnector) syncK8s() {
@@ -108,7 +108,6 @@ func initEpSvcMap(epSvcMap map[string]string, endpoints []*api.Endpoints) {
 					continue
 				}
 				nameWithNamespace := endpoint.Namespace + "/" + endpoint.Name
-
 				epSvcMap[address.IP] = nameWithNamespace
 			}
 		}
@@ -117,7 +116,6 @@ func initEpSvcMap(epSvcMap map[string]string, endpoints []*api.Endpoints) {
 
 // Get the ip of pods those are running on the current node.
 func (this *K8sConnector) GetPodsIPsOnNode() ([]string, error) {
-
 	ipSet := this.FindPodsIP()
 	var ipList []string
 	for ip, _ := range ipSet {
@@ -147,15 +145,18 @@ func (this *K8sConnector) retreivePodsIPsOnNode() ([]string, error) {
 	return ips, nil
 }
 
-// Here we only want to get the IP of those pods,
-// which are hosted by the current node with its own unique ip.
+// Here we only want to get the IP of those pods, which are hosted by the current node with its own unique ip.
+// NOTE This means we do not care those pods which has the same IP address as the node.
 func extractValidPodsIPs(pods []*api.Pod, hostAddresses map[string]struct{}) []string {
+	// Clear podIP2NameMap when the method gets called.
+	podIP2NameMap = make(map[string]string)
+
 	var ips []string
 	for _, pod := range pods {
 		if _, exist := hostAddresses[pod.Status.HostIP]; exist {
+			// Excluede pods share IP address with node.
 			if _, has := hostAddresses[pod.Status.PodIP]; !has {
 				ips = append(ips, pod.Status.PodIP)
-				// glog.V(3).Infof("Get pod %s,\t with IP %s", pod.Namespace+"/"+pod.Name, pod.Status.PodIP)
 				podIP2NameMap[pod.Status.PodIP] = pod.Name
 			}
 		}
@@ -199,9 +200,12 @@ func (this *K8sConnector) updateEndpointMap(epAddress string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Cannot update %s: %s", epAddress, err)
 	}
+	// Clear endpointServiceMap
+	endpointServiceMap = make(map[string]string)
 	return updateEpSvcMap(endpointServiceMap, epAddress, endpoints)
 }
 
+// Update the epSvcMap. Key is endpoint address, value is namespace/name of service.
 func updateEpSvcMap(epSvcMap map[string]string, epAddress string, endpoints []*api.Endpoints) (string, error) {
 	for _, endpoint := range endpoints {
 		for _, endpointSubset := range endpoint.Subsets {

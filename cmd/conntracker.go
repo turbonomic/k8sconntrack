@@ -39,13 +39,10 @@ func main() {
 		glog.Infof("~~~~~~~~~~~~~~~~   Transaction Counter	~~~~~~~~~~~~~~~~~~~~")
 		transactionCounter.ProcessConntrackConnections(c.Connections())
 
-		fmt.Println()
 		glog.Infof("----------------   Flow Collector	------------------------")
-
-		fmt.Println()
-		fmt.Println()
-
 		flowCollector.TrackFlow()
+		fmt.Println("##########################################################")
+		fmt.Println()
 	}
 }
 

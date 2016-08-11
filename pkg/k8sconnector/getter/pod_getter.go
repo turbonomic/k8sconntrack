@@ -22,6 +22,7 @@ type K8sPodGetter struct {
 
 func NewK8sPodGetter(kubeClient *client.Client) *K8sPodGetter {
 	return &K8sPodGetter{
+		getterType: EntityType_Pod,
 		kubeClient: kubeClient,
 	}
 }

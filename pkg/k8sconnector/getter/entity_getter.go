@@ -2,6 +2,8 @@ package getter
 
 import (
 	"fmt"
+
+	"github.com/golang/glog"
 )
 
 type EntityType string
@@ -32,6 +34,7 @@ func NewK8sEntityGetter() *K8sEntityGetter {
 }
 
 func (this *K8sEntityGetter) RegisterEntityGetter(eGetter EntityGetter) {
+	glog.V(3).Infof("Registering entity getter of type %v", eGetter.GetType())
 	this.getters[eGetter.GetType()] = eGetter
 }
 

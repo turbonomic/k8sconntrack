@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"syscall"
 
-	// "github.com/golang/glog"
+	"github.com/golang/glog"
 )
 
 func connectNetfilter(groups uint32) (int, *syscall.SockaddrNetlink, error) {
@@ -22,7 +22,8 @@ func connectNetfilter(groups uint32) (int, *syscall.SockaddrNetlink, error) {
 	return s, lsa, nil
 }
 
-// Follow gives a channel with all changes.
+// Follow returns a channel with all changes.
+// NOTE: currently we only return connection is ESTABLISHED state.
 func Follow() (<-chan ConntrackInfo, func(), error) {
 	s, _, err := connectNetfilter(NF_NETLINK_CONNTRACK_NEW | NF_NETLINK_CONNTRACK_UPDATE | NF_NETLINK_CONNTRACK_DESTROY)
 	stop := func() {
@@ -40,15 +41,17 @@ func Follow() (<-chan ConntrackInfo, func(), error) {
 				// Only track the connection state in ESTABLISHED for now.
 				return
 			}
-			// glog.V(4).Infof("Got an ESTABLISHED connection: %v \n", c)
 			res <- c
 		}); err != nil {
+			glog.Fatalf("Error reading message from Netfilter: %++v", err)
 			panic(err)
 		}
 	}()
 	return res, stop, nil
 }
 
+// Read from Netfilter and parse the result into ConntrackInfo object.
+// The resulting ConntrackInfo object is then passed into callback for further processing.
 func readMessagesFromNetfilter(s int, callback func(ConntrackInfo)) error {
 	for {
 		rb := make([]byte, syscall.Getpagesize()) // TODO: re-use
@@ -70,6 +73,7 @@ func readMessagesFromNetfilter(s int, callback func(ConntrackInfo)) error {
 					nflnSubsysID(msg.Header.Type))
 			}
 
+			// Now we can parse the raw message got from Netfilter.
 			conn, err := parsePayload(msg.Data[sizeofGenmsg:])
 			if err != nil {
 				return err

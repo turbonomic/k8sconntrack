@@ -39,33 +39,15 @@ type FilterFunc func(c ConntrackInfo) bool
 
 // lists all established TCP connections.
 func ListConnections(filter FilterFunc) ([]TCPConnection, error) {
-	s, lsa, err := connectNetfilter(0)
-	if err != nil {
-		return nil, fmt.Errorf("Error listing connections: %s", err)
-	}
+	s, err := sendRequestToNetfilter()
 	defer syscall.Close(s)
 
-	// build the requist.
-	msg := ConntrackListReq{
-		Header: syscall.NlMsghdr{
-			Len:   syscall.NLMSG_HDRLEN + sizeofGenmsg,
-			Type:  (NFNL_SUBSYS_CTNETLINK << 8) | uint16(IpctnlMsgCtGet),
-			Flags: syscall.NLM_F_REQUEST | syscall.NLM_F_DUMP,
-			Pid:   0,
-			Seq:   0,
-		},
-		Body: nfgenmsg{
-			Family:  syscall.AF_INET,
-			Version: NFNETLINK_V0,
-			ResID:   0,
-		},
-	}
-	wb := msg.toWireFormat()
-	if err := syscall.Sendto(s, wb, 0, lsa); err != nil {
+	if err != nil {
 		return nil, err
 	}
 
 	var conns []TCPConnection
+
 	local := FindPodIPs()
 
 	readMessagesFromNetfilter(s, func(c ConntrackInfo) {
@@ -84,11 +66,28 @@ func ListConnections(filter FilterFunc) ([]TCPConnection, error) {
 }
 
 func ListConntrackInfos(filter FilterFunc) ([]ConntrackInfo, error) {
+	s, err := sendRequestToNetfilter()
+	defer syscall.Close(s)
+
+	if err != nil {
+		return nil, err
+	}
+	var conns []ConntrackInfo
+
+	readMessagesFromNetfilter(s, func(c ConntrackInfo) {
+		if pass := filter(c); pass {
+			conns = append(conns, c)
+		}
+
+	})
+	return conns, nil
+}
+
+func sendRequestToNetfilter() (int, error) {
 	s, lsa, err := connectNetfilter(0)
 	if err != nil {
-		return nil, fmt.Errorf("Error listing connections: %s", err)
+		return -1, fmt.Errorf("Error listing connections: %s", err)
 	}
-	defer syscall.Close(s)
 
 	// build the requist.
 	msg := ConntrackListReq{
@@ -107,16 +106,7 @@ func ListConntrackInfos(filter FilterFunc) ([]ConntrackInfo, error) {
 	}
 	wb := msg.toWireFormat()
 	if err := syscall.Sendto(s, wb, 0, lsa); err != nil {
-		return nil, err
+		return -1, err
 	}
-
-	var conns []ConntrackInfo
-
-	readMessagesFromNetfilter(s, func(c ConntrackInfo) {
-		if pass := filter(c); pass {
-			conns = append(conns, c)
-		}
-
-	})
-	return conns, nil
+	return s, nil
 }
