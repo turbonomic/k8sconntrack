@@ -88,7 +88,7 @@ func ListenAndServeProxyServer(counter *tcounter.TransactionCounter, flowCollect
 	glog.V(3).Infof("Start VMT Kube-proxy server")
 	handler := NewServer(counter, flowCollector)
 	s := &http.Server{
-		Addr:           net.JoinHostPort("0.0.0.0", "2223"),
+		Addr:           net.JoinHostPort("0.0.0.0", "2222"),
 		Handler:        &handler,
 		MaxHeaderBytes: 1 << 20,
 	}
