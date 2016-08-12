@@ -1,5 +1,7 @@
 cmd/conntracker
 conntracker
 
+_output/
+
 .*swp
 .*swo
