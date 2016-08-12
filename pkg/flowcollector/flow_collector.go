@@ -50,9 +50,9 @@ func (this *FlowCollector) TrackFlow() {
 	// build flow based on connections
 	var currConntrackInfos map[string]*conntrack.ConntrackInfo = make(map[string]*conntrack.ConntrackInfo)
 	for _, i := range infos {
-		info := &i
-		key := keyFunc(info)
-		currConntrackInfos[key] = info
+		info := i
+		key := keyFunc(&info)
+		currConntrackInfos[key] = &info
 		if prevInfo, exist := prevConnectionMap[key]; exist {
 			bytesDiff := info.Bytes - prevInfo.Bytes
 			timeDiff := info.DeltaTime - prevInfo.DeltaTime

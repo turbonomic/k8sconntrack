@@ -74,7 +74,7 @@ func (tc *TransactionCounter) ProcessConntrackConnections(connections []conntrac
 			if err != nil {
 				glog.Errorf("\tError getting svc name\n")
 			}
-			tc.Count(svcName, address+":")
+			tc.Count(svcName, address)
 		}
 	}
 }
