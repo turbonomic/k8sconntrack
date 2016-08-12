@@ -12,7 +12,7 @@ As K8sconnection gathers networking metrics from netfilter, it requires to deplo
 You can find deploy guide for different scenarios [here](https://github.com/DongyiYang/k8sconnection/tree/master/examples/deploy_k8sconntrack)
 
 ## How to get metrics from K8sconnection
-An API server is created for K8sconnection, using port 2222 of each host.
+Metrics are exposed on port 2222 of each host.
 
 ### Transaction Metrics
 
