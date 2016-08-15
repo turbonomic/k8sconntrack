@@ -8,13 +8,13 @@ import (
 )
 
 type TransactionCounter struct {
-	connector *k8sconnector.K8sConnector
+	connector k8sconnector.Connector
 
 	// key is service name, value is the transaction related to it.
 	counter map[string]*Transaction
 }
 
-func NewTransactionCounter(connector *k8sconnector.K8sConnector) *TransactionCounter {
+func NewTransactionCounter(connector k8sconnector.Connector) *TransactionCounter {
 	counterMap := make(map[string]*Transaction)
 	return &TransactionCounter{
 		counter:   counterMap,

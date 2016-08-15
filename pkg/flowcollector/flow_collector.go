@@ -13,13 +13,13 @@ import (
 // Flow collector requires user to turn on nf_conntrack_acct and nf_conntrack_timestamp
 
 type FlowCollector struct {
-	connector *k8sconnector.K8sConnector
+	connector k8sconnector.Connector
 
 	// flows is a map, key is flow UID, value is Flow instance.
 	flows []*Flow
 }
 
-func NewFlowCollector(connector *k8sconnector.K8sConnector) *FlowCollector {
+func NewFlowCollector(connector k8sconnector.Connector) *FlowCollector {
 	return &FlowCollector{
 		connector: connector,
 	}
@@ -110,29 +110,6 @@ func (this *FlowCollector) flowConnectionFilterFunc(c conntrack.ConntrackInfo) b
 
 func (this *FlowCollector) GetAllFlows() []*Flow {
 	var result []*Flow
-	for _, flow := range this.flows {
-		result = append(result, flow)
-	}
-	glog.V(4).Infof("Get All flows %++v", result)
-
-	return result
-}
-
-// Get the flows within the time between current call and previous call,
-// calculate the average flow values for each unique connection
-func (this *FlowCollector) GetAllUniqueFlows() []*Flow {
-	uniqueConnectionToFlows := make(map[string][]*Flow)
-	for _, flow := range this.flows {
-		var flowList []*Flow
-		if fs, exist := uniqueConnectionToFlows[flow.UID]; exist {
-			flowList = fs
-		}
-		flowList = append(flowList, flow)
-		uniqueConnectionToFlows[flow.UID] = flowList
-	}
-
-	var result []*Flow
-
 	for _, flow := range this.flows {
 		result = append(result, flow)
 	}
