@@ -96,12 +96,12 @@ func (this *FlowCollector) flowConnectionFilterFunc(c conntrack.ConntrackInfo) b
 	}
 
 	// As for updated info, we only care about ESTABLISHED for now.
-	if c.TCPState != "ESTABLISHED" {
+	if c.TCPState != conntrack.TCPState_ESTABLISHED {
 		glog.V(4).Infof("State isn't in ESTABLISHED: %s\n", c.TCPState)
 		return false
 	}
 
-	if c.TCPState == "ESTABLISHED" {
+	if c.TCPState == conntrack.TCPState_ESTABLISHED {
 		glog.V(4).Infof("EEEEEEEE  ESTABLISHED conn is %v \n", c)
 	}
 

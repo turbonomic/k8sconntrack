@@ -37,7 +37,7 @@ func Follow() (<-chan ConntrackInfo, func(), error) {
 	go func() {
 		defer syscall.Close(s)
 		if err := readMessagesFromNetfilter(s, func(c ConntrackInfo) {
-			if c.TCPState != "ESTABLISHED" {
+			if c.TCPState != TCPState_ESTABLISHED {
 				// Only track the connection state in ESTABLISHED for now.
 				return
 			}

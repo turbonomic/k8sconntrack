@@ -78,7 +78,7 @@ func (c *ConnTrack) track() error {
 			return false
 		}
 		// As for updated info, we only care about ESTABLISHED for now.
-		if c.TCPState != "ESTABLISHED" {
+		if c.TCPState != TCPState_ESTABLISHED {
 			glog.V(4).Infof("State isn't in ESTABLISHED: %s\n", c.TCPState)
 			return false
 		}
@@ -116,7 +116,7 @@ func (c *ConnTrack) track() error {
 			default:
 				// not interested
 
-			case e.TCPState == "ESTABLISHED":
+			case e.TCPState == TCPState_ESTABLISHED:
 				conns := e.BuildTCPConn(podIPs)
 				for _, cn := range conns {
 					if cn == nil {
@@ -127,7 +127,7 @@ func (c *ConnTrack) track() error {
 					glog.V(4).Infof("Established Connection payload is %++v", cn)
 				}
 
-			case e.MsgType == NfctMsgDestroy, e.TCPState == "TIME_WAIT", e.TCPState == "CLOSE":
+			case e.MsgType == NfctMsgDestroy, e.TCPState == TCPState_TIME_WAIT, e.TCPState == TCPState_CLOSE:
 				// NOTE Since in Follow(), it only sends back conneciton with ESTABLISHED state,
 				// So this part of code would never be hit under current logic.
 			}

@@ -129,7 +129,7 @@ func parseProtoinfoTCP(b []byte, conn *ConntrackInfo) error {
 	for _, attr := range attrs {
 		switch CtattrProtoinfoTcp(attr.Typ) {
 		case CtaProtoinfoTcpState: //1
-			conn.TCPState = tcpState[uint8(attr.Msg[0])]
+			conn.TCPState = TCPState(uint8(attr.Msg[0]))
 		default:
 			// not interested
 		}

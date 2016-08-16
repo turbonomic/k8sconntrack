@@ -18,7 +18,7 @@ type ConntrackInfo struct {
 	Bytes          uint64
 	StartTimestamp uint64
 	DeltaTime      uint64
-	TCPState       string
+	TCPState       TCPState
 }
 
 func (c ConntrackInfo) String() string {

@@ -26,18 +26,20 @@ const (
 	NfctMsgDestroy NfConntrackEventType = 1 << 2
 )
 
+type TCPState uint8
+
 // taken from libnetfilter_conntrack/src/conntrack/snprintf.c
-var tcpState = []string{
-	"NONE",
-	"SYN_SENT",
-	"SYN_RECV",
-	"ESTABLISHED",
-	"FIN_WAIT",
-	"CLOSE_WAIT",
-	"LAST_ACK",
-	"TIME_WAIT",
-	"CLOSE",
-	"LISTEN",
-	"MAX",
-	"IGNORE",
-}
+const (
+	TCPState_NONE        TCPState = 0
+	TCPState_SYN_SENT    TCPState = 1
+	TCPState_SYN_RECV    TCPState = 2
+	TCPState_ESTABLISHED TCPState = 3
+	TCPState_FIN_WAIT    TCPState = 4
+	TCPState_CLOSE_WAIT  TCPState = 5
+	TCPState_LAST_ACK    TCPState = 6
+	TCPState_TIME_WAIT   TCPState = 7
+	TCPState_CLOSE       TCPState = 8
+	TCPState_LISTEN      TCPState = 9
+	TCPState_MAX         TCPState = 10
+	TCPState_IGNORE      TCPState = 11
+)

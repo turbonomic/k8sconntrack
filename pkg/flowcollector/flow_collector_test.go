@@ -19,7 +19,7 @@ type FakeConnInfoBuilder struct {
 	Bytes          uint64
 	StartTimestamp uint64
 	DeltaTime      uint64
-	TCPState       string
+	TCPState       conntrack.TCPState
 }
 
 func NewFakeConnInfoBuilder() *FakeConnInfoBuilder {
@@ -71,7 +71,7 @@ func (this *FakeConnInfoBuilder) WithStartTimestamp(ts uint64) *FakeConnInfoBuil
 	return this
 }
 
-func (this *FakeConnInfoBuilder) WithTCPState(state string) *FakeConnInfoBuilder {
+func (this *FakeConnInfoBuilder) WithTCPState(state conntrack.TCPState) *FakeConnInfoBuilder {
 	this.TCPState = state
 	return this
 }
@@ -143,7 +143,7 @@ func TestFlowConnectionFilterFunc(t *testing.T) {
 		IncludeSrcIP         bool
 		DstIP                net.IP
 		IncludeDstIP         bool
-		TCPState             string
+		TCPState             conntrack.TCPState
 		ExpectedFilterResult bool
 	}{
 		{
@@ -152,7 +152,7 @@ func TestFlowConnectionFilterFunc(t *testing.T) {
 			IncludeSrcIP:         true,
 			DstIP:                net.ParseIP("10.0.0.6"),
 			IncludeDstIP:         true,
-			TCPState:             "ESTABLISHED",
+			TCPState:             conntrack.TCPState_ESTABLISHED,
 			ExpectedFilterResult: true,
 		},
 		{
@@ -161,7 +161,7 @@ func TestFlowConnectionFilterFunc(t *testing.T) {
 			IncludeSrcIP:         true,
 			DstIP:                net.ParseIP("10.0.0.6"),
 			IncludeDstIP:         true,
-			TCPState:             "ESTABLISHED",
+			TCPState:             conntrack.TCPState_ESTABLISHED,
 			ExpectedFilterResult: false,
 		},
 		{
@@ -170,7 +170,7 @@ func TestFlowConnectionFilterFunc(t *testing.T) {
 			IncludeSrcIP:         false,
 			DstIP:                net.ParseIP("10.0.0.6"),
 			IncludeDstIP:         true,
-			TCPState:             "ESTABLISHED",
+			TCPState:             conntrack.TCPState_ESTABLISHED,
 			ExpectedFilterResult: false,
 		},
 		{
@@ -179,7 +179,7 @@ func TestFlowConnectionFilterFunc(t *testing.T) {
 			IncludeSrcIP:         true,
 			DstIP:                net.ParseIP("10.0.0.6"),
 			IncludeDstIP:         false,
-			TCPState:             "ESTABLISHED",
+			TCPState:             conntrack.TCPState_ESTABLISHED,
 			ExpectedFilterResult: false,
 		},
 		{
@@ -188,7 +188,7 @@ func TestFlowConnectionFilterFunc(t *testing.T) {
 			IncludeSrcIP:         true,
 			DstIP:                net.ParseIP("10.0.0.6"),
 			IncludeDstIP:         false,
-			TCPState:             "NONE",
+			TCPState:             conntrack.TCPState_NONE,
 			ExpectedFilterResult: false,
 		},
 	}
