@@ -34,14 +34,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	// Collect transaction and flow information every second.
 	for range time.Tick(1 * time.Second) {
 
-		glog.Infof("~~~~~~~~~~~~~~~~   Transaction Counter	~~~~~~~~~~~~~~~~~~~~")
+		glog.V(3).Infof("~~~~~~~~~~~~~~~~   Transaction Counter	~~~~~~~~~~~~~~~~~~~~")
 		transactionCounter.ProcessConntrackConnections(c.Connections())
 
-		glog.Infof("----------------   Flow Collector	------------------------")
+		glog.V(3).Infof("----------------   Flow Collector	------------------------")
 		flowCollector.TrackFlow()
-		fmt.Println("##########################################################")
+		glog.V(3).Infof("##########################################################")
 		fmt.Println()
 	}
 }

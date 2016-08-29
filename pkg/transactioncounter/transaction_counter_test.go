@@ -9,34 +9,32 @@ import (
 
 func TestCount(t *testing.T) {
 	tests := []struct {
-		CounterMap      map[string]*Transaction
+		CounterMap      map[string]map[string]int
 		ServiceName     string
 		EndpointAddress string
 		ExpectedCount   int
 	}{
 		{
-			CounterMap:      map[string]*Transaction{},
+			CounterMap:      map[string]map[string]int{},
 			ServiceName:     "service1",
 			EndpointAddress: "10.0.0.2",
 			ExpectedCount:   1,
 		},
 		{
-			CounterMap: map[string]*Transaction{
-				"service1": &Transaction{ServiceId: "service1",
-					EndpointsCounterMap: map[string]int{
-						"10.0.1.2": 3,
-					}},
+			CounterMap: map[string]map[string]int{
+				"service1": map[string]int{
+					"10.0.1.2": 3,
+				},
 			},
 			ServiceName:     "service1",
 			EndpointAddress: "10.0.0.2",
 			ExpectedCount:   1,
 		},
 		{
-			CounterMap: map[string]*Transaction{
-				"service1": &Transaction{ServiceId: "service1",
-					EndpointsCounterMap: map[string]int{
-						"10.0.0.2": 3,
-					}},
+			CounterMap: map[string]map[string]int{
+				"service1": map[string]int{
+					"10.0.0.2": 3,
+				},
 			},
 			ServiceName:     "service1",
 			EndpointAddress: "10.0.0.2",
@@ -49,8 +47,8 @@ func TestCount(t *testing.T) {
 		transactionCounter.counter = test.CounterMap
 		transactionCounter.Count(test.ServiceName, test.EndpointAddress)
 		var c int
-		if transaction, exist := transactionCounter.counter[test.ServiceName]; exist {
-			if epCounts, has := transaction.EndpointsCounterMap[test.EndpointAddress]; has {
+		if epMap, exist := transactionCounter.counter[test.ServiceName]; exist {
+			if epCounts, has := epMap[test.EndpointAddress]; has {
 				c = epCounts
 			} else {
 				t.Errorf("Endpoint %s is not found in transaction info for service %s.", test.EndpointAddress, test.ServiceName)
