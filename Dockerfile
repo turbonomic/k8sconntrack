@@ -4,6 +4,6 @@ FROM ubuntu
 # Set the file maintainer
 MAINTAINER Dongyi Yang <dongyi.yang@vmturbo.com>
 
-ADD conntracker /bin/conntracker
+ADD ./_output/conntracker /bin/conntracker
 
 ENTRYPOINT ["/bin/conntracker"]
