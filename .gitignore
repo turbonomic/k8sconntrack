@@ -5,3 +5,5 @@ _output/
 
 .*swp
 .*swo
+
+Godeps/_workspace/
