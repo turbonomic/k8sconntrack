@@ -5,7 +5,8 @@ import (
 	"runtime"
 	"time"
 
-	"k8s.io/kubernetes/pkg/util"
+	"k8s.io/kubernetes/pkg/util/flag"
+	"k8s.io/kubernetes/pkg/util/logs"
 
 	"github.com/spf13/pflag"
 
@@ -53,9 +54,9 @@ func createK8sConnector() (*k8sconnector.K8sConnector, error) {
 
 	s := k8sconnector.NewK8sConnectorBuilder().AddFlags(pflag.CommandLine)
 
-	util.InitFlags()
-	util.InitLogs()
-	defer util.FlushLogs()
+	flag.InitFlags()
+	logs.InitLogs()
+	defer logs.FlushLogs()
 
 	monitor, err := s.Build()
 	if err != nil {
