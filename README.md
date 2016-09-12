@@ -9,7 +9,7 @@ Right now it helps to answer the following questions:
 
 ## Run K8sconnection on Kubernetes
 As K8sconnection gathers networking metrics from netfilter, it requires to deploy K8sconnection application on every node in the Kubernetes cluster. The best way to deploy K8sconnection in a Kubernetes cluster is to deploy it as DaemonSet.
-You can find deploy guide for different scenarios [here](https://github.com/DongyiYang/k8sconnection/tree/master/examples/deploy_k8sconntrack)
+You can find deploy guide for different scenarios [here](deploy)
 
 ## How to get metrics from K8sconnection
 Metrics are exposed on port 2222 of each host.
