@@ -83,6 +83,7 @@ apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
   name: k8snet
+  namespace: default
   labels:
     name: k8snet
 spec:
