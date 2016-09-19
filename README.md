@@ -7,6 +7,10 @@ Right now it helps to answer the following questions:
 1. It exposes the number of transactions for applications at the service level. So it helps users to understand how the applications are used and determine whether to scale out/in applications automatically based on QoS.
 2. It exposes end-to-end traffic information among pods in Kubernetes cluster. So that users can understand the communication pattern between the pods and make initial placement or replacement based on networking topology.
 
+## Architecture
+
+![K8sconnection Architecture] (https://cloud.githubusercontent.com/assets/7660489/18649719/03feeb8a-7e8f-11e6-9995-9de6ec9e05b3.png "Architecture")
+
 ## Run K8sconnection on Kubernetes
 As K8sconnection gathers networking metrics from netfilter, it requires to deploy K8sconnection application on every node in the Kubernetes cluster. The best way to deploy K8sconnection in a Kubernetes cluster is to deploy it as DaemonSet.
 You can find deploy guide for different scenarios [here](deploy)
