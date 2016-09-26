@@ -12,17 +12,20 @@ import (
 type TransactionCounter struct {
 	connector k8sconnector.Connector
 
+	conntrack *conntrack.ConnTrack
+
 	// key is service name, value is the transaction related to it.
 	counter map[string]map[string]int
 
 	lastPollTimestamp uint64
 }
 
-func NewTransactionCounter(connector k8sconnector.Connector) *TransactionCounter {
+func NewTransactionCounter(connector k8sconnector.Connector, conntrack *conntrack.ConnTrack) *TransactionCounter {
 	counterMap := make(map[string]map[string]int)
 	return &TransactionCounter{
 		counter:   counterMap,
 		connector: connector,
+		conntrack: conntrack,
 	}
 }
 
@@ -89,7 +92,8 @@ func (tc *TransactionCounter) GetAllTransactions() []*Transaction {
 }
 
 // Get all the current Established TCP connections from conntrack and add count to transaction counter.
-func (tc *TransactionCounter) ProcessConntrackConnections(connections []conntrack.TCPConnection) {
+func (tc *TransactionCounter) ProcessConntrackConnections() {
+	connections := tc.conntrack.Connections()
 	if len(connections) > 0 {
 		glog.V(3).Infof("Connections:\n")
 		for _, cn := range connections {

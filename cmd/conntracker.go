@@ -26,20 +26,20 @@ func main() {
 	}
 	conntrack.SetK8sConnector(k8scon)
 
-	transactionCounter := transactioncounter.NewTransactionCounter(k8scon)
-	flowCollector := flowcollector.NewFlowCollector(k8scon)
-
-	go server.ListenAndServeProxyServer(transactionCounter, flowCollector)
-
 	c, err := conntrack.New()
 	if err != nil {
 		panic(err)
 	}
+	transactionCounter := transactioncounter.NewTransactionCounter(k8scon, c)
+	flowCollector := flowcollector.NewFlowCollector(k8scon)
+
+	go server.ListenAndServeProxyServer(transactionCounter, flowCollector)
+
 	// Collect transaction and flow information every second.
 	for range time.Tick(1 * time.Second) {
 
 		glog.V(3).Infof("~~~~~~~~~~~~~~~~   Transaction Counter	~~~~~~~~~~~~~~~~~~~~")
-		transactionCounter.ProcessConntrackConnections(c.Connections())
+		transactionCounter.ProcessConntrackConnections()
 
 		glog.V(3).Infof("----------------   Flow Collector	------------------------")
 		flowCollector.TrackFlow()
