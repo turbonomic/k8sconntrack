@@ -1,7 +1,11 @@
 package transactioncounter
 
 import (
+	"sync"
 	"time"
+
+	"k8s.io/kubernetes/pkg/api"
+	"k8s.io/kubernetes/pkg/types"
 
 	"github.com/dongyiyang/k8sconnection/pkg/conntrack"
 	"github.com/dongyiyang/k8sconnection/pkg/k8sconnector"
@@ -9,10 +13,18 @@ import (
 	"github.com/golang/glog"
 )
 
+type endpointsInfo struct {
+	types.NamespacedName
+}
+
 type TransactionCounter struct {
 	connector k8sconnector.Connector
 
 	conntrack *conntrack.ConnTrack
+
+	mu sync.Mutex
+
+	endpointsMap map[string]*endpointsInfo
 
 	// key is service name, value is the transaction related to it.
 	counter map[string]map[string]int
@@ -21,12 +33,40 @@ type TransactionCounter struct {
 }
 
 func NewTransactionCounter(connector k8sconnector.Connector, conntrack *conntrack.ConnTrack) *TransactionCounter {
-	counterMap := make(map[string]map[string]int)
 	return &TransactionCounter{
-		counter:   counterMap,
+		counter:   make(map[string]map[string]int),
 		connector: connector,
 		conntrack: conntrack,
+
+		endpointsMap: make(map[string]*endpointsInfo),
 	}
+}
+
+// Implement k8s.io/pkg/proxy/config/EndpointsConfigHandler Interface.
+func (this *TransactionCounter) OnEndpointsUpdate(allEndpoints []api.Endpoints) {
+	start := time.Now()
+	defer func() {
+		glog.V(4).Infof("OnEndpointsUpdate took %v for %d endpoints", time.Since(start), len(allEndpoints))
+	}()
+
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
+	// Clear the current endpoints set.
+	this.endpointsMap = make(map[string]*endpointsInfo)
+
+	for i := range allEndpoints {
+		endpoints := &allEndpoints[i]
+		for j := range endpoints.Subsets {
+			ss := &endpoints.Subsets[j]
+			for k := range ss.Addresses {
+				addr := &ss.Addresses[k]
+				this.endpointsMap[addr.IP] = &endpointsInfo{types.NamespacedName{Namespace: endpoints.Namespace, Name: endpoints.Name}}
+			}
+		}
+	}
+
+	this.syncConntrack()
 }
 
 // Clear the transaction counter map.
@@ -92,17 +132,25 @@ func (tc *TransactionCounter) GetAllTransactions() []*Transaction {
 }
 
 // Get all the current Established TCP connections from conntrack and add count to transaction counter.
-func (tc *TransactionCounter) ProcessConntrackConnections() {
-	connections := tc.conntrack.Connections()
+func (this *TransactionCounter) ProcessConntrackConnections() {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
+	this.syncConntrack()
+}
+
+func (this *TransactionCounter) syncConntrack() {
+	connections := this.conntrack.Connections()
 	if len(connections) > 0 {
 		glog.V(3).Infof("Connections:\n")
 		for _, cn := range connections {
 			address := cn.Local
-			svcName, err := tc.connector.GetServiceNameWithEndpointAddress(address)
-			if err != nil {
-				glog.Errorf("\tError getting svc name\n")
+			//			svcName, err := tc.connector.GetServiceNameWithEndpointAddress(address)
+			svcName, exist := this.endpointsMap[address]
+			if !exist {
+				glog.Errorf("\tError getting svc name based on endpoints address: %s", address)
 			}
-			tc.Count(svcName, address)
+			this.Count(svcName.String(), address)
 		}
 	}
 }

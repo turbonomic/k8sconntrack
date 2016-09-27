@@ -2,7 +2,10 @@ package flowcollector
 
 import (
 	"fmt"
+	"sync"
 	"time"
+
+	"k8s.io/kubernetes/pkg/api"
 
 	"github.com/dongyiyang/k8sconnection/pkg/conntrack"
 	"github.com/dongyiyang/k8sconnection/pkg/k8sconnector"
@@ -15,18 +18,54 @@ import (
 type FlowCollector struct {
 	connector k8sconnector.Connector
 
+	// Protects endpointsSet.
+	mu sync.Mutex
+
+	// endpintsMap keeps track of current endpoints in K8s cluster.
+	endpointsSet map[string]bool
+
+	// A map keeps track of ConntrackInfo
+	// TODO: For POC: key is src:srcPort->dest:destPort#startTimestamp
+	conntrackInfoMap map[string]*conntrack.ConntrackInfo
+
 	// flows is a map, key is flow UID, value is Flow instance.
 	flows []*Flow
 }
 
 func NewFlowCollector(connector k8sconnector.Connector) *FlowCollector {
 	return &FlowCollector{
-		connector: connector,
+		connector:        connector,
+		endpointsSet:     make(map[string]bool),
+		conntrackInfoMap: make(map[string]*conntrack.ConntrackInfo),
 	}
 }
 
-// TODO: For POC: key is src:srcPort->dest:destPort#startTimestamp
-var prevConnectionMap map[string]*conntrack.ConntrackInfo = make(map[string]*conntrack.ConntrackInfo)
+// Implement k8s.io/pkg/proxy/config/EndpointsConfigHandler Interface.
+func (this *FlowCollector) OnEndpointsUpdate(allEndpoints []api.Endpoints) {
+	start := time.Now()
+	defer func() {
+		glog.V(4).Infof("OnEndpointsUpdate took %v for %d endpoints", time.Since(start), len(allEndpoints))
+	}()
+
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
+	// Clear the current endpoints set.
+	this.endpointsSet = make(map[string]bool)
+
+	for i := range allEndpoints {
+		endpoints := &allEndpoints[i]
+		for j := range endpoints.Subsets {
+			ss := &endpoints.Subsets[j]
+			for k := range ss.Addresses {
+				addr := &ss.Addresses[k]
+				this.endpointsSet[addr.IP] = true
+			}
+		}
+	}
+
+	this.syncConntrackInfo()
+}
 
 func keyFunc(info *conntrack.ConntrackInfo) string {
 	if info == nil {
@@ -37,6 +76,14 @@ func keyFunc(info *conntrack.ConntrackInfo) string {
 }
 
 func (this *FlowCollector) TrackFlow() {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
+	this.syncConntrackInfo()
+}
+
+// Get valid ConntrackInfo from Conntrack and build Flow Objects.
+func (this *FlowCollector) syncConntrackInfo() {
 	// Track flow
 	infos, err := conntrack.ListConntrackInfos(this.flowConnectionFilterFunc)
 	if err != nil {
@@ -53,7 +100,7 @@ func (this *FlowCollector) TrackFlow() {
 		info := i
 		key := keyFunc(&info)
 		currConntrackInfos[key] = &info
-		if prevInfo, exist := prevConnectionMap[key]; exist {
+		if prevInfo, exist := this.conntrackInfoMap[key]; exist {
 			bytesDiff := info.Bytes - prevInfo.Bytes
 			timeDiff := info.DeltaTime - prevInfo.DeltaTime
 			if timeDiff == 0 {
@@ -73,8 +120,7 @@ func (this *FlowCollector) TrackFlow() {
 			this.flows = append(this.flows, flow)
 		}
 	}
-	prevConnectionMap = currConntrackInfos
-
+	this.conntrackInfoMap = currConntrackInfos
 }
 
 func (this *FlowCollector) flowConnectionFilterFunc(c conntrack.ConntrackInfo) bool {
@@ -86,11 +132,13 @@ func (this *FlowCollector) flowConnectionFilterFunc(c conntrack.ConntrackInfo) b
 
 	src := c.Src.String()
 	dst := c.Dst.String()
-	podIPs := this.connector.FindPodsIP()
-	_, srcPodLocal := podIPs[src]
-	_, dstPodLocal := podIPs[dst]
+	//	podIPs := this.connector.FindPodsIP()
+	//	_, srcPodLocal := podIPs[src]
+	//	_, dstPodLocal := podIPs[dst]
+	_, srcPodLocal := this.endpointsSet[src]
+	_, dstPodLocal := this.endpointsSet[dst]
 
-	// Only monitor connections between pods.
+	// NOTE: Only monitor connections between endpoints.
 	if !srcPodLocal || !dstPodLocal {
 		return false
 	}
