@@ -43,7 +43,7 @@ func TestCount(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		transactionCounter := NewTransactionCounter(k8sconnector.NewFakeConnector())
+		transactionCounter := NewTransactionCounter(k8sconnector.NewFakeConnector(), nil)
 		transactionCounter.counter = test.CounterMap
 		transactionCounter.Count(test.ServiceName, test.EndpointAddress)
 		var c int
