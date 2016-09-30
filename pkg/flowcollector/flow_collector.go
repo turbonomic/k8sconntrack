@@ -8,7 +8,6 @@ import (
 	"k8s.io/kubernetes/pkg/api"
 
 	"github.com/dongyiyang/k8sconnection/pkg/conntrack"
-	"github.com/dongyiyang/k8sconnection/pkg/k8sconnector"
 
 	"github.com/golang/glog"
 )
@@ -16,7 +15,6 @@ import (
 // Flow collector requires user to turn on nf_conntrack_acct and nf_conntrack_timestamp
 
 type FlowCollector struct {
-	connector k8sconnector.Connector
 
 	// Protects endpointsSet.
 	mu sync.Mutex
@@ -32,9 +30,8 @@ type FlowCollector struct {
 	flows []*Flow
 }
 
-func NewFlowCollector(connector k8sconnector.Connector) *FlowCollector {
+func NewFlowCollector() *FlowCollector {
 	return &FlowCollector{
-		connector:        connector,
 		endpointsSet:     make(map[string]bool),
 		conntrackInfoMap: make(map[string]*conntrack.ConntrackInfo),
 	}
@@ -132,9 +129,6 @@ func (this *FlowCollector) flowConnectionFilterFunc(c conntrack.ConntrackInfo) b
 
 	src := c.Src.String()
 	dst := c.Dst.String()
-	//	podIPs := this.connector.FindPodsIP()
-	//	_, srcPodLocal := podIPs[src]
-	//	_, dstPodLocal := podIPs[dst]
 	_, srcPodLocal := this.endpointsSet[src]
 	_, dstPodLocal := this.endpointsSet[dst]
 
@@ -145,7 +139,7 @@ func (this *FlowCollector) flowConnectionFilterFunc(c conntrack.ConntrackInfo) b
 
 	// As for updated info, we only care about ESTABLISHED for now.
 	if c.TCPState != conntrack.TCPState_ESTABLISHED {
-		glog.V(4).Infof("State isn't in ESTABLISHED: %s\n", c.TCPState)
+		glog.V(4).Infof("State isn't in ESTABLISHED: %v\n", c.TCPState)
 		return false
 	}
 

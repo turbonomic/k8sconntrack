@@ -48,18 +48,10 @@ func ListConnections(filter FilterFunc) ([]TCPConnection, error) {
 
 	var conns []TCPConnection
 
-	local := FindPodIPs()
-
 	readMessagesFromNetfilter(s, func(c ConntrackInfo) {
-		pass := filter(c)
-		if !pass {
-			return
-		}
-
-		if tc := c.BuildTCPConn(local); len(tc) > 0 {
-			for _, conn := range tc {
-				conns = append(conns, *conn)
-			}
+		if pass := filter(c); pass {
+			tc := c.BuildTCPConn()
+			conns = append(conns, *tc)
 		}
 	})
 	return conns, nil

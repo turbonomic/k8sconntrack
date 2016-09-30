@@ -8,7 +8,6 @@ import (
 	"k8s.io/kubernetes/pkg/types"
 
 	"github.com/dongyiyang/k8sconnection/pkg/conntrack"
-	"github.com/dongyiyang/k8sconnection/pkg/k8sconnector"
 
 	"github.com/golang/glog"
 )
@@ -18,8 +17,6 @@ type endpointsInfo struct {
 }
 
 type TransactionCounter struct {
-	connector k8sconnector.Connector
-
 	conntrack *conntrack.ConnTrack
 
 	mu sync.Mutex
@@ -32,10 +29,9 @@ type TransactionCounter struct {
 	lastPollTimestamp uint64
 }
 
-func NewTransactionCounter(connector k8sconnector.Connector, conntrack *conntrack.ConnTrack) *TransactionCounter {
+func NewTransactionCounter(conntrack *conntrack.ConnTrack) *TransactionCounter {
 	return &TransactionCounter{
 		counter:   make(map[string]map[string]int),
-		connector: connector,
 		conntrack: conntrack,
 
 		endpointsMap: make(map[string]*endpointsInfo),
@@ -83,20 +79,26 @@ func (tc *TransactionCounter) Reset() {
 // Increment the transaction count for a single endpoint.
 // Transaction counter map uses serviceName as key and endpoint map as value.
 // In endpoint map, key is endpoint IP address, value is the number of transaction happened on the endpoint.
-func (tc *TransactionCounter) Count(serviceName, endpointAddress string) {
-	epMap, ok := tc.counter[serviceName]
-	if !ok {
-		epMap = make(map[string]int)
+func (tc *TransactionCounter) Count(infos []*countInfo) {
+	for _, info := range infos {
+		serviceName := info.serviceName
+		endpointAddress := info.endpointAddress
+		epMap, ok := tc.counter[serviceName]
+		if !ok {
+			glog.Infof("Service %s is not tracked. Now initializing in map", serviceName)
+
+			epMap = make(map[string]int)
+		}
+		count, ok := epMap[endpointAddress]
+		if !ok {
+			glog.Infof("Endpoint %s for Service %s is not tracked. Now initializing in map", endpointAddress, serviceName)
+			count = 0
+		}
+		epMap[endpointAddress] = count + 1
+		tc.counter[serviceName] = epMap
+		glog.V(5).Infof("counter map is %++v", tc)
+		glog.V(4).Infof("Transaction count of %s is %d.", endpointAddress, epMap[endpointAddress])
 	}
-	count, ok := epMap[endpointAddress]
-	if !ok {
-		glog.Infof("Service %s is not tracked. Now initializing in map", serviceName)
-		count = 0
-	}
-	epMap[endpointAddress] = count + 1
-	tc.counter[serviceName] = epMap
-	glog.V(5).Infof("counter map is %v", tc)
-	glog.V(4).Infof("Transaction count of %s is %d.", endpointAddress, epMap[endpointAddress])
 }
 
 func (tc *TransactionCounter) GetAllTransactions() []*Transaction {
@@ -144,13 +146,34 @@ func (this *TransactionCounter) syncConntrack() {
 	if len(connections) > 0 {
 		glog.V(3).Infof("Connections:\n")
 		for _, cn := range connections {
-			address := cn.Local
-			//			svcName, err := tc.connector.GetServiceNameWithEndpointAddress(address)
-			svcName, exist := this.endpointsMap[address]
-			if !exist {
-				glog.Errorf("\tError getting svc name based on endpoints address: %s", address)
-			}
-			this.Count(svcName.String(), address)
+			//	address := cn.Local
+			//	glog.V(4).Infof("Get Connection %++v", cn)
+			//	svcName, exist := this.endpointsMap[address]
+			//	if !exist {
+			//		glog.Infof("Current Eps are :%++v", this.endpointsMap)
+			//		glog.Errorf("\tError getting svc name based on endpoints address: %s", address)
+			//		continue
+			//	}
+			infos := this.preProcessConnections(cn)
+			this.Count(infos)
 		}
 	}
+}
+
+type countInfo struct {
+	serviceName     string
+	endpointAddress string
+}
+
+// Fileter out connection does not have endpoints address as either Local or Remote Address
+func (this *TransactionCounter) preProcessConnections(c conntrack.TCPConnection) []*countInfo {
+	var infos []*countInfo
+	if svcName, exist := this.endpointsMap[c.Local]; exist {
+		infos = append(infos, &countInfo{svcName.String(), c.Local})
+	}
+	if svcName, exist := this.endpointsMap[c.Remote]; exist {
+		infos = append(infos, &countInfo{svcName.String(), c.Remote})
+	}
+	return infos
+
 }

@@ -1,4 +1,4 @@
-package k8sconnector
+package util
 
 import (
 	"fmt"
