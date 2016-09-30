@@ -1,10 +1,7 @@
 package transactioncounter
 
 import (
-	//	"fmt"
 	"testing"
-
-	"github.com/dongyiyang/k8sconnection/pkg/k8sconnector"
 )
 
 func TestCount(t *testing.T) {
@@ -43,9 +40,9 @@ func TestCount(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		transactionCounter := NewTransactionCounter(k8sconnector.NewFakeConnector(), nil)
+		transactionCounter := NewTransactionCounter(nil)
 		transactionCounter.counter = test.CounterMap
-		transactionCounter.Count(test.ServiceName, test.EndpointAddress)
+		transactionCounter.Count([]*countInfo{&countInfo{test.ServiceName, test.EndpointAddress}})
 		var c int
 		if epMap, exist := transactionCounter.counter[test.ServiceName]; exist {
 			if epCounts, has := epMap[test.EndpointAddress]; has {

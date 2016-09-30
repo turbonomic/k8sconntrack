@@ -94,18 +94,12 @@ func (c *ConnTrack) track() error {
 		established[c] = struct{}{}
 	}
 
-	podIPs := FindPodIPs()
-	updateLocalIPs := time.Tick(time.Minute)
-
 	for {
 		select {
 
 		case <-c.quit:
 			stop()
 			return nil
-
-		case <-updateLocalIPs:
-			podIPs = FindPodIPs()
 
 		case e, ok := <-events:
 			if !ok {
@@ -117,15 +111,13 @@ func (c *ConnTrack) track() error {
 				// not interested
 
 			case e.TCPState == TCPState_ESTABLISHED:
-				conns := e.BuildTCPConn(podIPs)
-				for _, cn := range conns {
-					if cn == nil {
-						// log.Printf("not a local connection: %+v\n", e)
-						continue
-					}
-					established[*cn] = struct{}{}
-					glog.V(4).Infof("Established Connection payload is %++v", cn)
+				cn := e.BuildTCPConn()
+				if cn == nil {
+					// log.Printf("not a local connection: %+v\n", e)
+					continue
 				}
+				established[*cn] = struct{}{}
+				glog.V(4).Infof("Established Connection payload is %++v", cn)
 
 			case e.MsgType == NfctMsgDestroy, e.TCPState == TCPState_TIME_WAIT, e.TCPState == TCPState_CLOSE:
 				// NOTE Since in Follow(), it only sends back conneciton with ESTABLISHED state,

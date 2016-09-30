@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/dongyiyang/k8sconnection/pkg/conntrack"
-	"github.com/dongyiyang/k8sconnection/pkg/k8sconnector"
 )
 
 type FakeConnInfoBuilder struct {
@@ -194,15 +193,14 @@ func TestFlowConnectionFilterFunc(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		connector := k8sconnector.NewFakeConnector()
+		flowCollector := NewFlowCollector()
+		connInfo := NewFakeConnInfoBuilder().WithMsgType(test.MsgType).WithSrc(test.SrcIP).WithDst(test.DstIP).WithTCPState(test.TCPState).Build()
 		if test.IncludeSrcIP {
-			connector.AddPodIP(test.SrcIP.String())
+			flowCollector.endpointsSet[test.SrcIP.String()] = true
 		}
 		if test.IncludeDstIP {
-			connector.AddPodIP(test.DstIP.String())
+			flowCollector.endpointsSet[test.DstIP.String()] = true
 		}
-		flowCollector := NewFlowCollector(connector)
-		connInfo := NewFakeConnInfoBuilder().WithMsgType(test.MsgType).WithSrc(test.SrcIP).WithDst(test.DstIP).WithTCPState(test.TCPState).Build()
 		filterResult := flowCollector.flowConnectionFilterFunc(*connInfo)
 		if filterResult != test.ExpectedFilterResult {
 			t.Errorf("Expected filterFunc result %t, got %t", test.ExpectedFilterResult, filterResult)

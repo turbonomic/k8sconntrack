@@ -26,33 +26,11 @@ func (c ConntrackInfo) String() string {
 		c.Src, c.SrcPort, c.Dst, c.DstPort, c.Packets, c.Bytes, c.StartTimestamp, c.DeltaTime)
 }
 
-// TCPConnection decides which way this connection is going and makes a TCPConnection.
-func (c ConntrackInfo) BuildTCPConn(addressSet map[string]struct{}) []*TCPConnection {
-	var res []*TCPConnection
-	// conntrack gives us all connections, even things passing through. But here we only
-	// care connection those are sourced from or destinated to address defined in addressSet
-	src := c.Src.String()
-	dst := c.Dst.String()
-	_, srcLocal := addressSet[src]
-	_, dstLocal := addressSet[dst]
-	if srcLocal {
-		srcConn := &TCPConnection{
-			Local:      src,
-			LocalPort:  strconv.Itoa(int(c.SrcPort)),
-			Remote:     dst,
-			RemotePort: strconv.Itoa(int(c.DstPort)),
-		}
-		res = append(res, srcConn)
+func (c ConntrackInfo) BuildTCPConn() *TCPConnection {
+	return &TCPConnection{
+		Local:      c.Src.String(),
+		LocalPort:  strconv.Itoa(int(c.SrcPort)),
+		Remote:     c.Dst.String(),
+		RemotePort: strconv.Itoa(int(c.DstPort)),
 	}
-	if dstLocal {
-		dstConn := &TCPConnection{
-			Local:      dst,
-			LocalPort:  strconv.Itoa(int(c.DstPort)),
-			Remote:     src,
-			RemotePort: strconv.Itoa(int(c.SrcPort)),
-		}
-		res = append(res, dstConn)
-	}
-	// Neither is in addressSet. conntrack also reports NAT connections.
-	return res
 }
