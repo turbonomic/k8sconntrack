@@ -3,8 +3,7 @@ package conntrack
 import (
 	"fmt"
 	"syscall"
-
-	"github.com/golang/glog"
+	"unsafe"
 )
 
 func connectNetfilter(groups uint32) (int, *syscall.SockaddrNetlink, error) {
@@ -22,39 +21,11 @@ func connectNetfilter(groups uint32) (int, *syscall.SockaddrNetlink, error) {
 	return s, lsa, nil
 }
 
-// Follow returns a channel with all changes.
-// NOTE: currently we only return connection is ESTABLISHED state.
-func Follow() (<-chan ConntrackInfo, func(), error) {
-	s, _, err := connectNetfilter(NF_NETLINK_CONNTRACK_NEW | NF_NETLINK_CONNTRACK_UPDATE | NF_NETLINK_CONNTRACK_DESTROY)
-	stop := func() {
-		syscall.Close(s)
-	}
-	if err != nil {
-		return nil, stop, err
-	}
-
-	res := make(chan ConntrackInfo, 1)
-	go func() {
-		defer syscall.Close(s)
-		if err := readMessagesFromNetfilter(s, func(c ConntrackInfo) {
-			if c.TCPState != TCPState_ESTABLISHED {
-				// Only track the connection state in ESTABLISHED for now.
-				return
-			}
-			res <- c
-		}); err != nil {
-			glog.Fatalf("Error reading message from Netfilter: %++v", err)
-			panic(err)
-		}
-	}()
-	return res, stop, nil
-}
-
 // Read from Netfilter and parse the result into ConntrackInfo object.
 // The resulting ConntrackInfo object is then passed into callback for further processing.
 func readMessagesFromNetfilter(s int, callback func(ConntrackInfo)) error {
 	for {
-		rb := make([]byte, syscall.Getpagesize()) // TODO: re-use
+		rb := make([]byte, syscall.Getpagesize())
 		nr, _, err := syscall.Recvfrom(s, rb, 0)
 		if err != nil {
 			return err
@@ -68,9 +39,9 @@ func readMessagesFromNetfilter(s int, callback func(ConntrackInfo)) error {
 			if err := nfnlIsError(msg.Header); err != nil {
 				return fmt.Errorf("Got an error message: %s\n", err)
 			}
-			if nflnSubsysID(msg.Header.Type) != NFNL_SUBSYS_CTNETLINK {
+			if nfnlSubsysID(msg.Header.Type) != NFNL_SUBSYS_CTNETLINK {
 				return fmt.Errorf("Unexpected subsys_id: %d\n",
-					nflnSubsysID(msg.Header.Type))
+					nfnlSubsysID(msg.Header.Type))
 			}
 
 			// Now we can parse the raw message got from Netfilter.
@@ -80,7 +51,7 @@ func readMessagesFromNetfilter(s int, callback func(ConntrackInfo)) error {
 			}
 
 			if conn.Proto != syscall.IPPROTO_TCP {
-				// We only process tcp connection right now.
+				// NOTE: We only process tcp connection right now.
 				continue
 			}
 
@@ -98,4 +69,67 @@ func readMessagesFromNetfilter(s int, callback func(ConntrackInfo)) error {
 			callback(*conn)
 		}
 	}
+}
+
+type nfgenmsg struct {
+	Family  uint8  /* AF_xxx */
+	Version uint8  /* nfnetlink version */
+	ResID   uint16 /* resource id */
+}
+
+const (
+	sizeofGenmsg = uint32(unsafe.Sizeof(nfgenmsg{})) // TODO
+)
+
+type ConntrackListReq struct {
+	Header syscall.NlMsghdr
+	Body   nfgenmsg
+}
+
+func (c *ConntrackListReq) toWireFormat() []byte {
+	// adapted from syscall/NetlinkRouteRequest.toWireFormat
+	b := make([]byte, c.Header.Len)
+	*(*uint32)(unsafe.Pointer(&b[0:4][0])) = c.Header.Len
+	*(*uint16)(unsafe.Pointer(&b[4:6][0])) = c.Header.Type
+	*(*uint16)(unsafe.Pointer(&b[6:8][0])) = c.Header.Flags
+	*(*uint32)(unsafe.Pointer(&b[8:12][0])) = c.Header.Seq
+	*(*uint32)(unsafe.Pointer(&b[12:16][0])) = c.Header.Pid
+	b[16] = byte(c.Body.Family)
+	b[17] = byte(c.Body.Version)
+	*(*uint16)(unsafe.Pointer(&b[18:20][0])) = c.Body.ResID
+	return b
+}
+
+func buildConntrackListRequest() []byte {
+	// build the request.
+	msg := ConntrackListReq{
+		Header: syscall.NlMsghdr{
+			Len:   syscall.NLMSG_HDRLEN + sizeofGenmsg,
+			Type:  (NFNL_SUBSYS_CTNETLINK << 8) | uint16(IpctnlMsgCtGet),
+			Flags: syscall.NLM_F_REQUEST | syscall.NLM_F_DUMP,
+			Pid:   0,
+			Seq:   0,
+		},
+		Body: nfgenmsg{
+			Family:  syscall.AF_INET,
+			Version: NFNETLINK_V0,
+			ResID:   0,
+		},
+	}
+	return msg.toWireFormat()
+
+}
+
+func sendRequestToNetfilter() (int, error) {
+	fd, sa, err := connectNetfilter(0)
+	if err != nil {
+		return -1, fmt.Errorf("Error connecting Netfilter: %s", err)
+	}
+
+	p := buildConntrackListRequest()
+
+	if err := syscall.Sendto(fd, p, 0, sa); err != nil {
+		return -1, err
+	}
+	return fd, nil
 }
