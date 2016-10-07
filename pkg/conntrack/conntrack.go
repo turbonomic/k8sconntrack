@@ -2,48 +2,59 @@ package conntrack
 
 import (
 	"fmt"
-	"time"
+	//	"time"
+	"syscall"
 
 	"github.com/golang/glog"
 )
 
-// TCPConnection is a connection
-type TCPConnection struct {
-	Local      string // net.IP
-	LocalPort  string // int
-	Remote     string // net.IP
-	RemotePort string // int
+// FilterFunc is used against each ConntrackInfo. If pass return true; otherwise return false.
+type FilterFunc func(c ConntrackInfo) bool
+
+func DefaultFilter(c ConntrackInfo) bool {
+	// Here we only care about updated info
+	if c.MsgType != NfctMsgUpdate {
+		glog.V(4).Infof("Message isn't an update: %d\n", c.MsgType)
+		return false
+	}
+	// As for updated info, we only care about ESTABLISHED for now.
+	if c.TCPState != TCPState_ESTABLISHED {
+		glog.V(4).Infof("State isn't in ESTABLISHED: %s\n", c.TCPState)
+		return false
+	}
+	glog.V(4).Infof("Established TCP connection is %++v \n", c)
+	return true
 }
 
-func (c TCPConnection) String() string {
-	return fmt.Sprintf("%s:%s->%s:%s", c.Local, c.LocalPort, c.Remote, c.RemotePort)
-}
-
-// ConnTrack monitors the connections.
+// ConnTrack monitors the network connections.
 type ConnTrack struct {
-	connReq chan chan []TCPConnection
+	connReq chan chan []ConntrackInfo
 	quit    chan struct{}
+
+	filterFunc FilterFunc
 }
 
 // New returns a ConnTrack.
-func New() (*ConnTrack, error) {
+func New(filterFunc FilterFunc) (*ConnTrack, error) {
 	c := ConnTrack{
-		connReq: make(chan chan []TCPConnection),
+		connReq: make(chan chan []ConntrackInfo),
 		quit:    make(chan struct{}),
+
+		filterFunc: filterFunc,
 	}
 	go func() {
-		for {
-			err := c.track()
-			select {
-			case <-c.quit:
-				return
-			default:
-			}
-			if err != nil {
-				glog.Errorf("conntrack: %s\n", err)
-			}
-			time.Sleep(1 * time.Second)
+		//		for {
+		err := c.track()
+		select {
+		case <-c.quit:
+			return
+		default:
 		}
+		if err != nil {
+			glog.Errorf("conntrack: %s\n", err)
+		}
+		//			time.Sleep(1 * time.Second)
+		//		}
 	}()
 
 	return &c, nil
@@ -54,44 +65,24 @@ func (c ConnTrack) Close() {
 	close(c.quit)
 }
 
-// Connections returns the list of all connections seen since last time you
-// called it.
-func (c *ConnTrack) Connections() []TCPConnection {
-	r := make(chan []TCPConnection)
-	c.connReq <- r
-	return <-r
-}
-
 // track is the main loop
 func (c *ConnTrack) track() error {
 	// We use Follow() to keep track of conn state changes, but it doesn't give
 	// us the initial state.
-	events, stop, err := Follow()
+	events, stop, err := c.Follow()
 	if err != nil {
 		return err
 	}
 
-	establishedConns, err := ListConnections(func(c ConntrackInfo) bool {
-		// Here we only care about updated info
-		if c.MsgType != NfctMsgUpdate {
-			glog.V(4).Infof("Message isn't an update: %d\n", c.MsgType)
-			return false
-		}
-		// As for updated info, we only care about ESTABLISHED for now.
-		if c.TCPState != TCPState_ESTABLISHED {
-			glog.V(4).Infof("State isn't in ESTABLISHED: %s\n", c.TCPState)
-			return false
-		}
-		glog.V(4).Infof("conn is %++v \n", c)
-		return true
-	})
+	// Use ListTCPConnections to get current established tcp connections.
+	establishedConns, err := c.ListConntrackInfos()
 	if err != nil {
-		return fmt.Errorf("Error listing ESTABLISHED connections: %++v.", err)
+		return fmt.Errorf("Error listing existing ESTABLISHED connections: %++v.", err)
 	}
 
-	established := map[TCPConnection]struct{}{}
+	established := map[string]ConntrackInfo{}
 	for _, c := range establishedConns {
-		established[c] = struct{}{}
+		established[c.String()] = c
 	}
 
 	for {
@@ -111,26 +102,70 @@ func (c *ConnTrack) track() error {
 				// not interested
 
 			case e.TCPState == TCPState_ESTABLISHED:
-				cn := e.BuildTCPConn()
-				if cn == nil {
-					// log.Printf("not a local connection: %+v\n", e)
-					continue
-				}
-				established[*cn] = struct{}{}
-				glog.V(4).Infof("Established Connection payload is %++v", cn)
-
-			case e.MsgType == NfctMsgDestroy, e.TCPState == TCPState_TIME_WAIT, e.TCPState == TCPState_CLOSE:
-				// NOTE Since in Follow(), it only sends back conneciton with ESTABLISHED state,
-				// So this part of code would never be hit under current logic.
+				established[e.String()] = e
+				glog.V(4).Infof("track() - Established Connection payload is %++v", e)
 			}
 
 		case r := <-c.connReq:
-			cs := make([]TCPConnection, 0, len(established))
-			for c := range established {
+			cs := make([]ConntrackInfo, 0, len(established))
+			for _, c := range established {
 				cs = append(cs, c)
 			}
 			r <- cs
-			established = map[TCPConnection]struct{}{}
+			established = map[string]ConntrackInfo{}
 		}
 	}
+}
+
+func (c *ConnTrack) ListConntrackInfos() ([]ConntrackInfo, error) {
+	s, err := sendRequestToNetfilter()
+	defer syscall.Close(s)
+
+	if err != nil {
+		return nil, err
+	}
+	var conns []ConntrackInfo
+
+	readMessagesFromNetfilter(s, func(conntrackInfo ConntrackInfo) {
+		if pass := c.filterFunc(conntrackInfo); pass {
+			conns = append(conns, conntrackInfo)
+		}
+
+	})
+	return conns, nil
+}
+
+// Connections gets the list of all connection track events seen since last time you
+// called it and return them as a list of ConntrackInfo.
+func (c *ConnTrack) ConnectionEvents() []ConntrackInfo {
+	r := make(chan []ConntrackInfo)
+	c.connReq <- r
+	return <-r
+}
+
+// Follow returns a channel with all changes.
+// NOTE: currently we only return connection is ESTABLISHED state.
+func (c *ConnTrack) Follow() (<-chan ConntrackInfo, func(), error) {
+	s, _, err := connectNetfilter(NF_NETLINK_CONNTRACK_NEW | NF_NETLINK_CONNTRACK_UPDATE | NF_NETLINK_CONNTRACK_DESTROY)
+	stop := func() {
+		syscall.Close(s)
+	}
+	if err != nil {
+		return nil, stop, err
+	}
+
+	res := make(chan ConntrackInfo, 1)
+	go func() {
+		defer syscall.Close(s)
+		err := readMessagesFromNetfilter(s, func(conntrackInfo ConntrackInfo) {
+			if c.filterFunc(conntrackInfo) {
+				res <- conntrackInfo
+			}
+		})
+		if err != nil {
+			glog.Fatalf("Error reading message from Netfilter: %++v", err)
+			panic(err)
+		}
+	}()
+	return res, stop, nil
 }

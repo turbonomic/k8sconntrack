@@ -11,7 +11,7 @@ func nflnMsgType(x uint16) uint8 {
 }
 
 // NFNL_SUBSYS_ID
-func nflnSubsysID(x uint16) uint8 {
+func nfnlSubsysID(x uint16) uint8 {
 	return uint8((x & 0xff00) >> 8)
 }
 

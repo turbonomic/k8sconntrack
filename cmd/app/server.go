@@ -43,12 +43,12 @@ func NewK8sConntrackServer(config *options.K8sConntrackConfig) (*K8sConntrackSer
 		return nil, fmt.Errorf("Invalid API configuration: %v", err)
 	}
 
-	c, err := conntrack.New()
+	c, err := conntrack.New(conntrack.DefaultFilter)
 	if err != nil {
 		panic(err)
 	}
 	transactionCounter := transactioncounter.NewTransactionCounter(c)
-	flowCollector := flowcollector.NewFlowCollector()
+	flowCollector := flowcollector.NewFlowCollector(c)
 
 	endpointsConfig := proxyconfig.NewEndpointsConfig()
 	endpointsConfig.RegisterHandler(flowCollector)

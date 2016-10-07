@@ -19,6 +19,8 @@ type FlowCollector struct {
 	// Protects endpointsSet.
 	mu sync.Mutex
 
+	conntrack *conntrack.ConnTrack
+
 	// endpintsMap keeps track of current endpoints in K8s cluster.
 	endpointsSet map[string]bool
 
@@ -30,8 +32,10 @@ type FlowCollector struct {
 	flows []*Flow
 }
 
-func NewFlowCollector() *FlowCollector {
+func NewFlowCollector(c *conntrack.ConnTrack) *FlowCollector {
 	return &FlowCollector{
+		conntrack: c,
+
 		endpointsSet:     make(map[string]bool),
 		conntrackInfoMap: make(map[string]*conntrack.ConntrackInfo),
 	}
@@ -82,7 +86,7 @@ func (this *FlowCollector) TrackFlow() {
 // Get valid ConntrackInfo from Conntrack and build Flow Objects.
 func (this *FlowCollector) syncConntrackInfo() {
 	// Track flow
-	infos, err := conntrack.ListConntrackInfos(this.flowConnectionFilterFunc)
+	infos, err := this.conntrack.ListConntrackInfos()
 	if err != nil {
 		panic(err)
 	}
@@ -127,24 +131,22 @@ func (this *FlowCollector) flowConnectionFilterFunc(c conntrack.ConntrackInfo) b
 		return false
 	}
 
-	src := c.Src.String()
-	dst := c.Dst.String()
-	_, srcPodLocal := this.endpointsSet[src]
-	_, dstPodLocal := this.endpointsSet[dst]
-
-	// NOTE: Only monitor connections between endpoints.
-	if !srcPodLocal || !dstPodLocal {
-		return false
-	}
-
 	// As for updated info, we only care about ESTABLISHED for now.
 	if c.TCPState != conntrack.TCPState_ESTABLISHED {
-		glog.V(4).Infof("State isn't in ESTABLISHED: %v\n", c.TCPState)
 		return false
 	}
 
-	if c.TCPState == conntrack.TCPState_ESTABLISHED {
-		glog.V(4).Infof("EEEEEEEE  ESTABLISHED conn is %v \n", c)
+	// Additional filtering step.
+	{
+		src := c.Src.String()
+		dst := c.Dst.String()
+		_, srcPodLocal := this.endpointsSet[src]
+		_, dstPodLocal := this.endpointsSet[dst]
+
+		// NOTE: Only monitor connections between endpoints.
+		if !srcPodLocal || !dstPodLocal {
+			return false
+		}
 	}
 
 	return true

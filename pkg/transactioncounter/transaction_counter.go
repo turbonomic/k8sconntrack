@@ -85,18 +85,17 @@ func (tc *TransactionCounter) Count(infos []*countInfo) {
 		endpointAddress := info.endpointAddress
 		epMap, ok := tc.counter[serviceName]
 		if !ok {
-			glog.Infof("Service %s is not tracked. Now initializing in map", serviceName)
+			glog.V(4).Infof("Service %s is not tracked. Now initializing in map", serviceName)
 
 			epMap = make(map[string]int)
 		}
 		count, ok := epMap[endpointAddress]
 		if !ok {
-			glog.Infof("Endpoint %s for Service %s is not tracked. Now initializing in map", endpointAddress, serviceName)
+			glog.V(4).Infof("Endpoint %s for Service %s is not tracked. Now initializing in map", endpointAddress, serviceName)
 			count = 0
 		}
 		epMap[endpointAddress] = count + 1
 		tc.counter[serviceName] = epMap
-		glog.V(5).Infof("counter map is %++v", tc)
 		glog.V(4).Infof("Transaction count of %s is %d.", endpointAddress, epMap[endpointAddress])
 	}
 }
@@ -126,7 +125,7 @@ func (tc *TransactionCounter) GetAllTransactions() []*Transaction {
 			EndpointsCounterMap: valueMap,
 			EpCountAbs:          countMap,
 		}
-		glog.V(4).Infof("Get transaction data: %++v", transaction)
+		glog.V(1).Infof("Get transaction data: %++v", transaction)
 		transactions = append(transactions, transaction)
 	}
 
@@ -142,18 +141,10 @@ func (this *TransactionCounter) ProcessConntrackConnections() {
 }
 
 func (this *TransactionCounter) syncConntrack() {
-	connections := this.conntrack.Connections()
+	connections := this.conntrack.ConnectionEvents()
 	if len(connections) > 0 {
 		glog.V(3).Infof("Connections:\n")
 		for _, cn := range connections {
-			//	address := cn.Local
-			//	glog.V(4).Infof("Get Connection %++v", cn)
-			//	svcName, exist := this.endpointsMap[address]
-			//	if !exist {
-			//		glog.Infof("Current Eps are :%++v", this.endpointsMap)
-			//		glog.Errorf("\tError getting svc name based on endpoints address: %s", address)
-			//		continue
-			//	}
 			infos := this.preProcessConnections(cn)
 			this.Count(infos)
 		}
@@ -165,14 +156,14 @@ type countInfo struct {
 	endpointAddress string
 }
 
-// Fileter out connection does not have endpoints address as either Local or Remote Address
-func (this *TransactionCounter) preProcessConnections(c conntrack.TCPConnection) []*countInfo {
+// Filter out connection does not have endpoints address as either Local or Remote Address
+func (this *TransactionCounter) preProcessConnections(c conntrack.ConntrackInfo) []*countInfo {
 	var infos []*countInfo
-	if svcName, exist := this.endpointsMap[c.Local]; exist {
-		infos = append(infos, &countInfo{svcName.String(), c.Local})
+	if svcName, exist := this.endpointsMap[c.Src.String()]; exist {
+		infos = append(infos, &countInfo{svcName.String(), c.Src.String()})
 	}
-	if svcName, exist := this.endpointsMap[c.Remote]; exist {
-		infos = append(infos, &countInfo{svcName.String(), c.Remote})
+	if svcName, exist := this.endpointsMap[c.Dst.String()]; exist {
+		infos = append(infos, &countInfo{svcName.String(), c.Dst.String()})
 	}
 	return infos
 
