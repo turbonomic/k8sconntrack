@@ -9,7 +9,7 @@ CONTEXT_NAME=${CONTEXT_NAME:-"kube-aws-context"}
 KUBERNETES_SERVER_ADDRESS=""
 CA_FILE_PATH=""
 CERTIFICATE_PATH=""
-KEY_PATH="" 
+KEY_PATH=""
 
 if [[ $# != 4 ]]; then
   echo "Not enough argument. Run the script with --server=<KUBERNETES_SERVER_ADDRESS> --ca=<CA_FILE_PATH> --cert=<CERTIFICATE_PATH> --key=<KEY_PATH>"
@@ -20,7 +20,7 @@ if [[ ! -d $KUBETURBO_CONFIG_PATH ]]; then
   mkdir -p $KUBETURBO_CONFIG_PATH
 fi
 
-KUBECONFIG_PATH=$KUBETURBO_CONFIG_PATH/kubeconfig-aws
+KUBECONFIG_PATH=$KUBETURBO_CONFIG_PATH/kubeconfig
 
 args=$(getopt -o '' -l server:,ca:,cert:,key: -- "$@")
 if [[ $? -ne 0 ]]; then
@@ -31,17 +31,17 @@ fi
 eval set -- "${args}"
 
 while true; do
-    case $1 in 
-      --server) 
+    case $1 in
+      --server)
   shift
-  if [[ -z "$1" ]; then
+  if [[ -z "$1" ]]; then
           >&2 echo "empty argument to --server flag"
           exit 1
         fi
   KUBERNETES_SERVER_ADDRESS=$1
   shift
   ;;
-      --ca) 
+      --ca)
   shift
   if [ -z "$1" ]; then
           >&2 echo "empty argument to --ca flag"
@@ -50,7 +50,7 @@ while true; do
   CA_FILE_PATH=$1
   shift
   ;;
-      --cert) 
+      --cert)
   shift
   if [ -z "$1" ]; then
           >&2 echo "empty argument to --cert flag"
@@ -59,7 +59,7 @@ while true; do
   CERTIFICATE_PATH=$1
   shift
   ;;
-      --key) 
+      --key)
   shift
   if [ -z "$1" ]; then
           >&2 echo "empty argument to --key flag"
@@ -69,19 +69,19 @@ while true; do
   shift
   ;;
       --)
-  shift 
+  shift
   break;
   ;;
       *) echo "Error"; exit 1 ;;
     esac
 done
 
-if [[ $KUBERNETES_SERVER_ADDRESS == "" ]]; then 
+if [[ $KUBERNETES_SERVER_ADDRESS == "" ]]; then
     >&2 echo "!Error: Kubernetes server address not provided. Run the script with --server=<SERVER_ADDRESS> "
     exit 1
 fi
 
-if [[ $CA_FILE_PATH == "" ]]; then 
+if [[ $CA_FILE_PATH == "" ]]; then
     >&2 echo "!Error: Path to certificate authority file is not provided. Run the script with --ca=<PATH_TO_CA_FIL
 E>"
     exit 1
@@ -90,7 +90,7 @@ elif [[ ! -f $CA_FILE_PATH ]]; then
     exit 1
 fi
 
-if [[ $CERTIFICATE_PATH == "" ]]; then 
+if [[ $CERTIFICATE_PATH == "" ]]; then
     >&2 echo "!Error: Path to client certificate file is not provided. Run the script with --cert=<PATH_TO_CLIENT_
 CERTIFICATE>"
     exit 1
@@ -99,7 +99,7 @@ elif [[ ! -f $CERTIFICATE_PATH ]]; then
     exit 1
 fi
 
-if [[ $KEY_PATH == "" ]]; then 
+if [[ $KEY_PATH == "" ]]; then
     >&2 echo "!Error: Path to client key file is not provided. Run the script with --key=<PATH_TO_CLIENT_KEY>"
     exit 1
 elif [[ ! -f $KEY_PATH ]]; then
