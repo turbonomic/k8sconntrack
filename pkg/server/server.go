@@ -58,21 +58,26 @@ func (s *Server) getAllTransactionsAndReset(w http.ResponseWriter, r *http.Reque
 func (s *Server) getTransactionsCount(w http.ResponseWriter, r *http.Request) {
 	transactions := s.counter.GetAllTransactions()
 
+	data, err := json.MarshalIndent(transactions, "", "  ")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(transactions); err != nil {
-		panic(err)
-	}
+	w.Write(data)
 }
 
 func (s *Server) getAllFlows(w http.ResponseWriter, r *http.Request) {
 	flows := s.flowCollector.GetAllFlows()
 
+	data, err := json.MarshalIndent(flows, "", "  ")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(flows); err != nil {
-		panic(err)
-	}
+	w.Write(data)
 }
 
 func (s *Server) resetCounter() {
