@@ -23,6 +23,15 @@ type K8sConntrackServer struct {
 }
 
 func NewK8sConntrackServer(config *options.K8sConntrackConfig) (*K8sConntrackServer, error) {
+	// Set up sysctl variables
+	conntracker := realConntracker{}
+	if err := conntracker.EnableAcct(); err != nil {
+		return nil, fmt.Errorf("Error setting netfilter_conntrack_acct: %++v", err)
+	}
+	if err := conntracker.EnableTimestamp(); err != nil {
+		return nil, fmt.Errorf("Error setting netfilter_conntrack_timestamp: %++v", err)
+	}
+
 	if config.Kubeconfig == "" && config.Master == "" {
 		return nil, fmt.Errorf("Neither --kubeconfig nor --master was specified.  Using default API client.  This might not work.")
 	}
