@@ -98,6 +98,11 @@ func (this *FlowCollector) syncConntrackInfo() {
 	// build flow based on connections
 	var currConntrackInfos map[string]*conntrack.ConntrackInfo = make(map[string]*conntrack.ConntrackInfo)
 	for _, i := range infos {
+		// First filter the result.
+		if passed := this.flowConnectionFilterFunc(i); !passed {
+			continue
+		}
+
 		info := i
 		key := keyFunc(&info)
 		currConntrackInfos[key] = &info

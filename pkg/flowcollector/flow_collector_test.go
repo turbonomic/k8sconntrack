@@ -193,7 +193,7 @@ func TestFlowConnectionFilterFunc(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		flowCollector := NewFlowCollector()
+		flowCollector := NewFlowCollector(nil)
 		connInfo := NewFakeConnInfoBuilder().WithMsgType(test.MsgType).WithSrc(test.SrcIP).WithDst(test.DstIP).WithTCPState(test.TCPState).Build()
 		if test.IncludeSrcIP {
 			flowCollector.endpointsSet[test.SrcIP.String()] = true
