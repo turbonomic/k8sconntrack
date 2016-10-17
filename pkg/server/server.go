@@ -89,11 +89,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 // TODO: For now the address and port number is hardcoded. The actual port number need to be discussed.
-func ListenAndServeProxyServer(counter *tcounter.TransactionCounter, flowCollector *fcollector.FlowCollector) {
+func ListenAndServeProxyServer(bindAddress, bindPort string, counter *tcounter.TransactionCounter, flowCollector *fcollector.FlowCollector) {
 	glog.V(3).Infof("Start VMT Kube-proxy server")
 	handler := NewServer(counter, flowCollector)
 	s := &http.Server{
-		Addr:           net.JoinHostPort("0.0.0.0", "2222"),
+		Addr:           net.JoinHostPort(bindAddress, bindPort),
 		Handler:        &handler,
 		MaxHeaderBytes: 1 << 20,
 	}

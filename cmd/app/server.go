@@ -18,6 +18,7 @@ import (
 )
 
 type K8sConntrackServer struct {
+	config             *options.K8sConntrackConfig
 	transactionCounter *transactioncounter.TransactionCounter
 	flowCollector      *flowcollector.FlowCollector
 }
@@ -70,13 +71,14 @@ func NewK8sConntrackServer(config *options.K8sConntrackConfig) (*K8sConntrackSer
 		endpointsConfig.Channel("api"))
 
 	return &K8sConntrackServer{
+		config,
 		transactionCounter,
 		flowCollector,
 	}, nil
 }
 
 func (this *K8sConntrackServer) Run() {
-	go server.ListenAndServeProxyServer(this.transactionCounter, this.flowCollector)
+	go server.ListenAndServeProxyServer(this.config.ConntrackBindAddress, this.config.ConntrackPort, this.transactionCounter, this.flowCollector)
 
 	// Collect transaction and flow information every second.
 	for range time.Tick(1 * time.Second) {
