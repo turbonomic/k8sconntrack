@@ -57,12 +57,21 @@ func NewK8sConntrackServer(config *options.K8sConntrackConfig) (*K8sConntrackSer
 	if err != nil {
 		panic(err)
 	}
-	transactionCounter := transactioncounter.NewTransactionCounter(c)
-	flowCollector := flowcollector.NewFlowCollector(c)
 
 	endpointsConfig := proxyconfig.NewEndpointsConfig()
-	endpointsConfig.RegisterHandler(flowCollector)
-	endpointsConfig.RegisterHandler(transactionCounter)
+
+	var transactionCounter *transactioncounter.TransactionCounter
+	if config.EnableConnectionCounter {
+		glog.V(3).Infof("Connection Counter Enabled.")
+		transactionCounter = transactioncounter.NewTransactionCounter(c)
+		endpointsConfig.RegisterHandler(transactionCounter)
+	}
+	var flowCollector *flowcollector.FlowCollector
+	if config.EnableFlowCollector {
+		glog.V(3).Infof("Flow Collector Enabled.")
+		flowCollector = flowcollector.NewFlowCollector(c)
+		endpointsConfig.RegisterHandler(flowCollector)
+	}
 
 	proxyconfig.NewSourceAPI(
 		kubeClient,
@@ -83,11 +92,15 @@ func (this *K8sConntrackServer) Run() {
 	// Collect transaction and flow information every second.
 	for range time.Tick(1 * time.Second) {
 
-		glog.V(3).Infof("~~~~~~~~~~~~~~~~   Transaction Counter	~~~~~~~~~~~~~~~~~~~~")
-		this.transactionCounter.ProcessConntrackConnections()
+		if this.transactionCounter != nil {
+			glog.V(3).Infof("~~~~~~~~~~~~~~~~   Transaction Counter	~~~~~~~~~~~~~~~~~~~~")
+			this.transactionCounter.ProcessConntrackConnections()
+		}
 
-		glog.V(3).Infof("----------------   Flow Collector	------------------------")
-		this.flowCollector.TrackFlow()
+		if this.flowCollector != nil {
+			glog.V(3).Infof("----------------   Flow Collector	------------------------")
+			this.flowCollector.TrackFlow()
+		}
 		glog.V(3).Infof("##########################################################")
 		fmt.Println()
 	}

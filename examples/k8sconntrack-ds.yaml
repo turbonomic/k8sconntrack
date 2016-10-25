@@ -13,7 +13,7 @@ spec:
       hostNetwork: true
       containers:
       - name: k8sconntracker
-        image: dongyiyang/k8sconntracker:v0.2beta
+        image: dongyiyang/k8sconntracker:dev
         securityContext:
           privileged: true
         ports:
@@ -24,5 +24,6 @@ spec:
           - /bin/conntracker
         args:
           - --v=3
-          - --master=http://127.0.0.1:8080
+          - --master=http://172.17.0.1:8080
+          - --enable-flow-collector=true
       restartPolicy: Always

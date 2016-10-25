@@ -56,6 +56,10 @@ func (s *Server) getAllTransactionsAndReset(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *Server) getTransactionsCount(w http.ResponseWriter, r *http.Request) {
+	if s.counter == nil {
+		fmt.Fprintf(w, "Connection Counter is disabled.")
+		return
+	}
 	transactions := s.counter.GetAllTransactions()
 
 	data, err := json.MarshalIndent(transactions, "", "  ")
@@ -69,6 +73,10 @@ func (s *Server) getTransactionsCount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getAllFlows(w http.ResponseWriter, r *http.Request) {
+	if s.flowCollector == nil {
+		fmt.Fprintf(w, "Flow Collector is disabled.")
+		return
+	}
 	flows := s.flowCollector.GetAllFlows()
 
 	data, err := json.MarshalIndent(flows, "", "  ")
