@@ -13,6 +13,7 @@ type K8sConntrackConfig struct {
 
 	EnableConnectionCounter bool
 	EnableFlowCollector     bool
+	SocketBufferSize        string
 }
 
 func NewK8sConntrackConfig() *K8sConntrackConfig {
@@ -29,4 +30,5 @@ func (s *K8sConntrackConfig) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.ConntrackPort, "conntrack-port", "2222", "The port to bind the k8sconntrack server.")
 	fs.BoolVar(&s.EnableConnectionCounter, "enable-connection-counter", true, "If set false, explicitly disable connection connector.")
 	fs.BoolVar(&s.EnableFlowCollector, "enable-flow-collector", true, "If set false, explicitly disable flow collector.")
+	fs.StringVar(&s.SocketBufferSize, "buffer-size", "", "Set the buffer size when communicating with kernel. Can set small, medium, large.")
 }

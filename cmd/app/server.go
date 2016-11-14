@@ -32,6 +32,10 @@ func NewK8sConntrackServer(config *options.K8sConntrackConfig) (*K8sConntrackSer
 	if err := conntracker.EnableTimestamp(); err != nil {
 		return nil, fmt.Errorf("Error setting netfilter_conntrack_timestamp: %++v", err)
 	}
+	switch config.SocketBufferSize {
+	case "medium":
+		conntracker.SetSocketReadBuffer(33554432)
+	}
 
 	if config.Kubeconfig == "" && config.Master == "" {
 		return nil, fmt.Errorf("Neither --kubeconfig nor --master was specified.  Using default API client.  This might not work.")
