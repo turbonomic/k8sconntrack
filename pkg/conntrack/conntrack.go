@@ -43,7 +43,6 @@ func New(filterFunc FilterFunc) (*ConnTrack, error) {
 		filterFunc: filterFunc,
 	}
 	go func() {
-		//		for {
 		err := c.track()
 		select {
 		case <-c.quit:
@@ -53,8 +52,6 @@ func New(filterFunc FilterFunc) (*ConnTrack, error) {
 		if err != nil {
 			glog.Errorf("conntrack: %s\n", err)
 		}
-		//			time.Sleep(1 * time.Second)
-		//		}
 	}()
 
 	return &c, nil

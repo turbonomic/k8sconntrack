@@ -28,7 +28,7 @@ func readMessagesFromNetfilter(s int, callback func(ConntrackInfo)) error {
 		rb := make([]byte, syscall.Getpagesize())
 		nr, _, err := syscall.Recvfrom(s, rb, 0)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error Recvfrom netfilter: %v", err)
 		}
 
 		msgs, err := syscall.ParseNetlinkMessage(rb[:nr])
@@ -47,7 +47,7 @@ func readMessagesFromNetfilter(s int, callback func(ConntrackInfo)) error {
 			// Now we can parse the raw message got from Netfilter.
 			conn, err := parsePayload(msg.Data[sizeofGenmsg:])
 			if err != nil {
-				return err
+				return fmt.Errorf("Error parsing payload: %v", err)
 			}
 
 			if conn.Proto != syscall.IPPROTO_TCP {

@@ -25,5 +25,5 @@ spec:
         args:
           - --v=3
           - --master=http://172.17.0.1:8080
-          - --enable-flow-collector=true
+          - --enable-flow-collector=false
       restartPolicy: Always
