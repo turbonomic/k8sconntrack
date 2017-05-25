@@ -2,7 +2,6 @@ package conntrack
 
 import (
 	"fmt"
-	//	"time"
 	"syscall"
 
 	"github.com/golang/glog"

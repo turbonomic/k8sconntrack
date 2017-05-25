@@ -9,7 +9,7 @@ Right now it helps to answer the following questions:
 
 ## Architecture
 
-![K8sconnection Architecture] (https://cloud.githubusercontent.com/assets/7660489/18649719/03feeb8a-7e8f-11e6-9995-9de6ec9e05b3.png "Architecture")
+![K8sconnection Architecture](https://cloud.githubusercontent.com/assets/7660489/18649719/03feeb8a-7e8f-11e6-9995-9de6ec9e05b3.png)
 
 ## Run K8sconnection on Kubernetes
 As K8sconnection gathers networking metrics from netfilter, it requires to deploy K8sconnection application on every node in the Kubernetes cluster. The best way to deploy K8sconnection in a Kubernetes cluster is to deploy it as DaemonSet.

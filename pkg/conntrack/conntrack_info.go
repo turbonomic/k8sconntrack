@@ -3,7 +3,6 @@ package conntrack
 import (
 	"fmt"
 	"net"
-	//	"strconv"
 )
 
 // Struct for storing retreived conntrack information. The fields are chosen according the output of nf_conntrack.

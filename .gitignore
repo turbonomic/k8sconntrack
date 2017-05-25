@@ -7,3 +7,4 @@ _output/
 .*swo
 
 Godeps/_workspace/
+.idea/
