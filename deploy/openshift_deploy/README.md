@@ -94,8 +94,8 @@ spec:
     spec:
       hostNetwork: true
       containers:
-      - name: k8sconntracker
-        image: dongyiyang/k8sconntracker:dev
+      - name: K8sConntracker
+        image: dongyiyang/K8sConntracker:dev
         securityContext:
           privileged: true
         ports:
@@ -119,7 +119,7 @@ spec:
           secretName: vmt-config
 ```
 
-[Download example](k8sconntrack-openshift-secret-ds.yaml?raw=true)
+[Download example](K8sConntrack-openshift-secret-ds.yaml?raw=true)
 
 Then you would find k8snet daemonset is created and pods are deployed onto every node in the cluster.
 

@@ -1,6 +1,6 @@
-## Deploy K8sconntrack on AWS Kubernetes Cluster
+## Deploy K8sConntrack on AWS Kubernetes Cluster
 
-This example shows how to deploy k8sconntrack monitoring agent in an existing Kubernetes cluster. K8sconntrack is deployed as a DaemonSet in the cluster. So that it makes sure there is a k8sconntrack pod running on each node.
+This example shows how to deploy K8sConntrack monitoring agent in an existing Kubernetes cluster. K8sConntrack is deployed as a DaemonSet in the cluster. So that it makes sure there is a K8sConntrack pod running on each node.
 
 ### Prerequisites
 
@@ -10,9 +10,9 @@ This example requires a running Kubernetes cluster. First check the current clus
 $ kubectl cluster-info
 ```
 
-NOTE: This guide assumes that there is no authentication configured on kube-apiserver. If there is, please refer to the guide for deploying K8sconntrack on Kubernets AWS cluster.
+NOTE: This guide assumes that there is no authentication configured on kube-apiserver. If there is, please refer to the guide for deploying K8sConntrack on Kubernets AWS cluster.
 
-### Create K8sconntrack DaemonSet
+### Create K8sConntrack DaemonSet
 
 Here you need to get the IP address and port number for the kube-apiserver.
 
@@ -33,8 +33,8 @@ spec:
     spec:
       hostNetwork: true
       containers:
-      - name: k8sconntracker
-        image: dongyiyang/k8sconntracker:dev
+      - name: K8sConntracker
+        image: dongyiyang/K8sConntracker:dev
         securityContext:
           privileged: true
         command:
@@ -45,12 +45,12 @@ spec:
       restartPolicy: Always
 ```
 
-[Download example](k8sconntrack-ds.yaml?raw=true)
+[Download example](K8sConntrack-ds.yaml?raw=true)
 
 ### Create a DaemontSet
 
 ```console
-$ kubectl create -f k8sconntrack-ds.yaml
+$ kubectl create -f K8sConntrack-ds.yaml
 ```
 
 Then check the list of daemonsets, which include k8snet:
@@ -72,4 +72,4 @@ k8snet-hmpbj                          1/1       Running   0          19s
 k8snet-pvezd                          1/1       Running   0          19s
 ```
 
-Now K8sconntrack monitoring agent is running on each node in your Kubernetes cluster.
+Now K8sConntrack monitoring agent is running on each node in your Kubernetes cluster.

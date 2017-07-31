@@ -1,6 +1,6 @@
-## Deploy K8sconntrack on AWS Kubernetes Cluster
+## Deploy K8sConntrack on AWS Kubernetes Cluster
 
-This example shows how to deploy k8sconntrack monitoring agent in Kubernetes cluster running on AWS. K8sconntrack is deployed as a DaemonSet in the cluster. So that it makes sure on every node there is a k8sconntrack pod running.
+This example shows how to deploy K8sConntrack monitoring agent in Kubernetes cluster running on AWS. K8sConntrack is deployed as a DaemonSet in the cluster. So that it makes sure on every node there is a K8sConntrack pod running.
 
 ### Prerequisites
 
@@ -45,7 +45,7 @@ If not specified, will use "kube-aws-context"
 You can find the script under aws_deploy or get it from [here](create_kubeconfig.sh?raw=true)
 
 ### Step Two: Create Secret
-Kubeconfig is mounted as a secret into each k8sconntrack pod. To create vmt-config secret, you can run:
+Kubeconfig is mounted as a secret into each K8sConntrack pod. To create vmt-config secret, you can run:
 
 ```console
 $ kubectl create secret generic vmt-config --from-file=path/to/kubeturbo/config
@@ -59,7 +59,7 @@ NAME		TYPE		DATA		AGE
 vmt-config	Opaque		3		5s
 ```
 
-### Step Three: Create K8sconntrack DaemonSet
+### Step Three: Create K8sConntrack DaemonSet
 
 ### Define a DaemonSet
 
@@ -78,8 +78,8 @@ spec:
     spec:
       hostNetwork: true
       containers:
-      - name: k8sconntracker
-        image: dongyiyang/k8sconntracker:dev
+      - name: K8sConntracker
+        image: dongyiyang/K8sConntracker:dev
         securityContext:
           privileged: true
         ports:
@@ -102,12 +102,12 @@ spec:
           secretName: vmt-config
 ```
 
-[Download example](k8sconntrack-use-secret-ds.yaml?raw=true)
+[Download example](K8sConntrack-use-secret-ds.yaml?raw=true)
 
 ### Create a DaemontSet
 
 ```console
-$ kubectl create -f k8sconntrack-use-secret-ds.yaml
+$ kubectl create -f K8sConntrack-use-secret-ds.yaml
 ```
 
 Then check the list of daemonsets, which include k8snet:
@@ -129,6 +129,6 @@ k8snet-thr05                          1/1       Running   0          19h
 k8snet-v670d                          1/1       Running   0          19h
 ```
 
-Now K8sconntrack monitoring agent is running on each node in your Kubernetes cluster.
+Now K8sConntrack monitoring agent is running on each node in your Kubernetes cluster.
 
 
